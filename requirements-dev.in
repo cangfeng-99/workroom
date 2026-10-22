@@ -1,0 +1,15 @@
+# Development baseline for the local preparation environment (T003).
+# Scope: this lists what is installed for local development only.
+# - Django 5.2.x is the development baseline; it is NOT a final product decision.
+# - mysqlclient is a driver only. No business database/account is configured yet,
+#   and this does not mean the app is connected to MySQL.
+# - Frontend/desktop framework is still undecided; nothing here selects one.
+# Install with the project venv interpreter (never the system Python):
+#   uv pip install --python .venv/Scripts/python.exe -r requirements-dev.in --only-binary mysqlclient
+
+Django>=5.2,<5.3
+pytest
+pytest-django
+ruff
+mysqlclient
+playwright

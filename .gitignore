@@ -1,0 +1,50 @@
+# Local environment (regenerable / machine-specific)
+.venv/
+.tools/
+
+# Secrets and real configuration — never commit
+.env
+.env.*
+!.env.example
+*.local.env
+*.secret
+config.local.*
+settings_local.py
+local_settings.py
+
+# Runtime output
+logs/
+tasks/logs/
+*.log
+*.sqlite3
+*.sqlite3-journal
+
+# Python caches / build
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+build/
+dist/
+*.egg-info/
+
+# Browser / test artifacts
+test-results/
+playwright-report/
+blob-report/
+.playwright/
+playwright/.cache/
+*.webm
+screenshots/
+tmp/
+
+# Editor / OS
+.vscode/
+.idea/
+Thumbs.db
+Desktop.ini
+
+# Machine-local verification output and app configuration backups
+tasks/reports/
+tasks/backups/

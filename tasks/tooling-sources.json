@@ -1,0 +1,176 @@
+{
+  "task": "T004R2",
+  "recorded_at": "2026-10-22T23:41:01+08:00",
+  "mode": "LOCAL_RESTORE_ONLY",
+  "network_access_this_round": false,
+  "source_cache_root": "D:\\Users\\28369\\Desktop\\AgentWorkspace\\.tools\\source-cache",
+  "install_targets": [
+    "C:\\Users\\28369\\.codex\\skills",
+    "C:\\Users\\28369\\.workbuddy\\skills"
+  ],
+  "precheck": {
+    "targets_absent_before_copy": true,
+    "checked": [
+      "C:\\Users\\28369\\.codex\\skills\\webapp-testing",
+      "C:\\Users\\28369\\.codex\\skills\\python-testing-patterns",
+      "C:\\Users\\28369\\.workbuddy\\skills\\webapp-testing",
+      "C:\\Users\\28369\\.workbuddy\\skills\\python-testing-patterns"
+    ],
+    "overwrite_performed": false
+  },
+  "skills": [
+    {
+      "name": "webapp-testing",
+      "repo": "anthropics/skills",
+      "repo_url": "https://github.com/anthropics/skills",
+      "repo_subdir": "skills/webapp-testing",
+      "ref": "dbd4588f9e1033efb41dad4bef2f7947c8993d44",
+      "pinned_url": "https://github.com/anthropics/skills/tree/dbd4588f9e1033efb41dad4bef2f7947c8993d44/skills/webapp-testing",
+      "license": {
+        "spdx": "See LICENSE.txt in skill directory",
+        "file": "LICENSE.txt",
+        "sha256": "bc6b3af2f331cbc7fb0da1344efb2cbe5877a31498b4d70dbc7000f3405a1362"
+      },
+      "skill_md_sha256": "51b7349e77ec63b7744a6f63647e7566a0b4d2e301121cc10e8c2113af6556a2",
+      "files": {
+        "SKILL.md": "51b7349e77ec63b7744a6f63647e7566a0b4d2e301121cc10e8c2113af6556a2",
+        "LICENSE.txt": "bc6b3af2f331cbc7fb0da1344efb2cbe5877a31498b4d70dbc7000f3405a1362",
+        "scripts/with_server.py": "b0dcf4918935b795f4eda9821579b9902119235ff4447f687a30286e7d0925fd",
+        "examples/console_logging.py": "ea46877289acb82da7e7ce59d0bc37c8977cd57e2a006d0c88d7a1c625bf95da",
+        "examples/element_discovery.py": "d63c89604a22f8845d724e95dda45db49b1bf57c25ce0a83afbb7b8da3d402f0",
+        "examples/static_html_automation.py": "9d533aafb875ee3ab8b8ebf8f5b9003ac8d999da3d09b285cce252e623140064"
+      },
+      "installed_paths": [
+        "C:\\Users\\28369\\.codex\\skills\\webapp-testing",
+        "C:\\Users\\28369\\.workbuddy\\skills\\webapp-testing"
+      ]
+    },
+    {
+      "name": "python-testing-patterns",
+      "repo": "wshobson/agents",
+      "repo_url": "https://github.com/wshobson/agents",
+      "repo_subdir": "plugins/python-development/skills/python-testing-patterns",
+      "ref": "0874a27b17a22e2b7c2e2bcd725768e0803cad06",
+      "pinned_url": "https://github.com/wshobson/agents/tree/0874a27b17a22e2b7c2e2bcd725768e0803cad06/plugins/python-development/skills/python-testing-patterns",
+      "license": {
+        "spdx": "MIT",
+        "file": "LICENSE (copied from repository root)",
+        "source_path": ".tools/source-cache/wshobson/agents/LICENSE",
+        "sha256": "f89abb55d9f073f38f1703e4518f0613c788c6174be7f13b8dfe48a1c076c746"
+      },
+      "skill_md_sha256": "a1020718f31629c2a5b20731cad1804dbb81b18800495c5cebdf16e6cac9c175",
+      "files": {
+        "SKILL.md": "a1020718f31629c2a5b20731cad1804dbb81b18800495c5cebdf16e6cac9c175",
+        "references/advanced-patterns.md": "f560ee8b3cffc0fe971e78269bed21dc74f541c2056eae58d34259d9e537176a",
+        "references/details.md": "baaa88e2997d960c19f981248b9e3e850e36e2cdf4d97b50297f5d9764826349",
+        "LICENSE": "f89abb55d9f073f38f1703e4518f0613c788c6174be7f13b8dfe48a1c076c746"
+      },
+      "installed_paths": [
+        "C:\\Users\\28369\\.codex\\skills\\python-testing-patterns",
+        "C:\\Users\\28369\\.workbuddy\\skills\\python-testing-patterns"
+      ]
+    }
+  ],
+  "verification": {
+    "utf8_strict_decode": "PASS (4/4 SKILL.md)",
+    "yaml_front_matter": "PASS (4/4 start with '---'; no BOM)",
+    "sha256_source_vs_both_copies": "PASS (2/2 skills, 4/4 files match)",
+    "referenced_files_exist": "PASS (scripts/with_server.py x2; references/advanced-patterns.md, references/details.md x2)",
+    "tree_parity": "PASS (webapp-testing 6/6 identical; python-testing-patterns 3/3 identical + LICENSE added)",
+    "helper_help": {
+      "cmd": "D:\\Users\\28369\\Desktop\\AgentWorkspace\\.venv\\Scripts\\python.exe C:\\Users\\28369\\.codex\\skills\\webapp-testing\\scripts\\with_server.py --help",
+      "exit_code": 0,
+      "server_started": false
+    }
+  },
+  "not_done": {
+    "network_download": false,
+    "server_started": false,
+    "business_code": false,
+    "database_created": false,
+    "dependency_reinstall": false
+  },
+  "agent_references_T005": {
+    "recorded_at": "2026-10-22T23:32+08:00",
+    "mode": "COPY_FROM_LOCAL_CACHE_ONLY",
+    "network_access_this_round": false,
+    "repo": "wshobson/agents",
+    "repo_url": "https://github.com/wshobson/agents",
+    "ref": "0874a27b17a22e2b7c2e2bcd725768e0803cad06",
+    "cache_root": ".tools/source-cache/wshobson/agents",
+    "license": {
+      "spdx": "MIT",
+      "file": "experts/sources/LICENSE-wshobson-agents-MIT.txt",
+      "source_path": ".tools/source-cache/wshobson/agents/LICENSE",
+      "sha256": "f89abb55d9f073f38f1703e4518f0613c788c6174be7f13b8dfe48a1c076c746"
+    },
+    "items": [
+      {
+        "role": "1-backend-django",
+        "use": "Django/API、事务边界、权限、查询优化",
+        "file": "django-pro.md",
+        "upstream_url": "https://github.com/wshobson/agents/blob/0874a27b17a22e2b7c2e2bcd725768e0803cad06/plugins/python-development/agents/django-pro.md",
+        "ref": "0874a27b17a22e2b7c2e2bcd725768e0803cad06",
+        "license": "MIT (wshobson/agents)",
+        "sha256": "c78ced4de870c84aa9d854cb25bbd1adfc7be1c3d812a3b4235114e0b2c4555a",
+        "copied_to": "D:\\Users\\28369\\Desktop\\AgentWorkspace\\experts\\sources\\django-pro.md",
+        "cache_sha256_match": true
+      },
+      {
+        "role": "2-frontend",
+        "use": "前端状态、可访问性、浏览器行为",
+        "file": "frontend-developer.md",
+        "upstream_url": "https://github.com/wshobson/agents/blob/0874a27b17a22e2b7c2e2bcd725768e0803cad06/plugins/frontend-mobile-development/agents/frontend-developer.md",
+        "ref": "0874a27b17a22e2b7c2e2bcd725768e0803cad06",
+        "license": "MIT (wshobson/agents)",
+        "sha256": "5f2ac8f077913cd0921139003583f6d77766239f0638eb17fe555e852c603a26",
+        "copied_to": "D:\\Users\\28369\\Desktop\\AgentWorkspace\\experts\\sources\\frontend-developer.md",
+        "cache_sha256_match": true
+      },
+      {
+        "role": "3-agent-engineering",
+        "use": "Agent 工具契约、计划-执行、失败重试、证据",
+        "file": "ai-engineer.md",
+        "upstream_url": "https://github.com/wshobson/agents/blob/0874a27b17a22e2b7c2e2bcd725768e0803cad06/plugins/llm-application-dev/agents/ai-engineer.md",
+        "ref": "0874a27b17a22e2b7c2e2bcd725768e0803cad06",
+        "license": "MIT (wshobson/agents)",
+        "sha256": "3e337acbc20749df4cad66a968960f3aaec4c437b17d6ef2b2ea17cd63cd004c",
+        "copied_to": "D:\\Users\\28369\\Desktop\\AgentWorkspace\\experts\\sources\\ai-engineer.md",
+        "cache_sha256_match": true
+      },
+      {
+        "role": "4-security-workspace",
+        "use": "工作区路径、符号链接、密钥、命令与外部写入",
+        "file": "security-auditor.md",
+        "upstream_url": "https://github.com/wshobson/agents/blob/0874a27b17a22e2b7c2e2bcd725768e0803cad06/plugins/security-scanning/agents/security-auditor.md",
+        "ref": "0874a27b17a22e2b7c2e2bcd725768e0803cad06",
+        "license": "MIT (wshobson/agents)",
+        "sha256": "8c01b76d526c83a5646b77ee70a4cf33aaf0a5eee826ab949ea6ed97f1319cfa",
+        "copied_to": "D:\\Users\\28369\\Desktop\\AgentWorkspace\\experts\\sources\\security-auditor.md",
+        "cache_sha256_match": true
+      },
+      {
+        "role": "5-testing",
+        "use": "pytest 单测、集成、端到端",
+        "file": "test-automator.md",
+        "upstream_url": "https://github.com/wshobson/agents/blob/0874a27b17a22e2b7c2e2bcd725768e0803cad06/plugins/unit-testing/agents/test-automator.md",
+        "ref": "0874a27b17a22e2b7c2e2bcd725768e0803cad06",
+        "license": "MIT (wshobson/agents)",
+        "sha256": "439a44edf224638acaefd241258b6dc189b4f7ade5427ebc9d29b04e7f532017",
+        "copied_to": "D:\\Users\\28369\\Desktop\\AgentWorkspace\\experts\\sources\\test-automator.md",
+        "cache_sha256_match": true
+      }
+    ],
+    "usage": "experts/ROLES.md 路由；每次只按需读当次相关原文，不作为框架/模型选型依据",
+    "verification": {
+      "sha256_vs_cache": "PASS (5/5)",
+      "utf8_strict_decode": "PASS (5/5)"
+    }
+  },
+  "source_review": {
+    "reviewed_at": "2026-10-22T23:41:01+08:00",
+    "connector_payload_exact_bytes": true,
+    "git_blob_sha1_checks": 9,
+    "note": "Removed an extra final LF introduced by source-cache staging; historical task logs retain original hashes."
+  }
+}

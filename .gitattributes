@@ -1,0 +1,4 @@
+* text=auto
+*.cmd text eol=crlf
+# Preserve pinned upstream references byte-for-byte, including license text.
+experts/sources/** -text
