@@ -1,117 +1,547 @@
 {% extends 'projects/base.html' %}
+{% load static %}
 {% block title %}{{ project.name }} · 协作画布{% endblock %}
-{% block heading %}
-  <p class="eyebrow">工作台 / 项目画布</p>
-  <h1>{{ project.name }}</h1>
-  {% if project.description %}<p class="page-sub">{{ project.description }}</p>{% endif %}
+{% block body_class %}page-projects page-board{% endblock %}
+{% block extra_head %}
+  <link rel="stylesheet" href="{% static 'projects/canvas.css' %}">
 {% endblock %}
-{% block content %}
-<div class="board" data-board>
-  <p class="muted">{{ members|length }} 位成员 · {{ tasks|length }} 个任务</p>
 
-  <section class="card" aria-label="项目团队">
-    <h2>团队</h2>
-    <ul class="plain-list">
-      {% for member in members %}
-        <li>
-          <span class="member-name">{{ member.name }}</span>
-          <span class="member-kind">{% if member.kind == 'ai' %}AI · 未连接{% else %}真人成员{% endif %}</span>
-          <span class="member-role">{{ member.role }}</span>
-          {% if is_owner %}
-            <form method="post" action="{% url 'projects:member_update' project.pk member.pk %}">
-              {% csrf_token %}
-              <label>角色 <input type="text" name="role" value="{{ member.role }}" maxlength="80"></label>
-              <button type="submit">更新角色</button>
-            </form>
-          {% endif %}
-        </li>
-      {% empty %}
-        <li class="empty">暂无成员。</li>
-      {% endfor %}
-    </ul>
+{% block sidebar %}
+<aside class="board-rail" aria-label="项目导航">
+  <a class="rail-brand" href="{% url 'core:home' %}">
+    <span class="rail-mark" aria-hidden="true">A</span>
+    <span>AgentWorkspace</span>
+  </a>
+
+  <div class="rail-head">
+    <span>项目</span>
+    <a class="rail-new" href="{% url 'projects:new' %}" title="新建项目" aria-label="新建项目">+</a>
+  </div>
+
+  <nav class="rail-projects" aria-label="我的项目">
+    {% for item in visible_projects %}
+      <a class="rail-project{% if item.pk == project.pk %} is-active{% endif %}"
+         href="{% url 'projects:board' item.pk %}"
+         {% if item.pk == project.pk %}aria-current="page"{% endif %}>
+        <span class="rail-badge" aria-hidden="true">{{ item.name|slice:":1"|upper }}</span>
+        <span class="rail-name">{{ item.name }}</span>
+      </a>
+    {% empty %}
+      <p class="rail-empty">还没有项目。</p>
+    {% endfor %}
+  </nav>
+
+  <div class="rail-tools">
+    <a href="{% url 'projects:list' %}">所有项目</a>
     {% if is_owner %}
-      <form method="post" action="{% url 'projects:member_add' project.pk %}">
-        {% csrf_token %}{{ member_form.as_p }}
-        <button type="submit" class="primary">添加成员</button>
-      </form>
+      {% if project.workspace_path %}
+        <a href="{% url 'projects:open' project.pk %}">项目工作空间</a>
+      {% else %}
+        <a href="#board-workspace">选择工作空间</a>
+      {% endif %}
+    {% endif %}
+    {% if is_owner %}
+      <a href="{% url 'projects:detail' project.pk %}">项目设置</a>
+    {% endif %}
+  </div>
+
+  <div class="rail-foot">
+    <span class="rail-avatar" aria-hidden="true">{{ user.username|slice:":1"|upper }}</span>
+    <span class="rail-user" title="{{ user.username }}">{{ user.username }}</span>
+    <form class="rail-logout" method="post" action="{% url 'accounts:logout' %}">
+      {% csrf_token %}
+      <button type="submit">退出</button>
+    </form>
+  </div>
+</aside>
+{% endblock %}
+
+{% block heading %}
+  <div class="board-head">
+    <div class="board-head-main">
+      <a class="board-crumb" href="{% url 'projects:list' %}">项目</a>
+      <h1>{{ project.name }}</h1>
+      {% if project.description %}<p class="board-desc" title="{{ project.description }}">{{ project.description }}</p>{% endif %}
+    </div>
+    <div class="board-head-actions">
+      <button class="team-button" type="button" data-team-toggle aria-controls="board-side" aria-expanded="false">
+        <span class="avatar-stack" aria-hidden="true">
+          {% for member in members|slice:":4" %}
+            <span class="avatar{% if member.kind == 'ai' %} ai{% endif %}">{{ member.name|slice:":1"|upper }}</span>
+          {% endfor %}
+        </span>
+        <span>团队 <strong>{{ members|length }}</strong></span>
+      </button>
+      {% if is_owner %}
+        <a class="button ghost" href="{% url 'projects:detail' project.pk %}">设置</a>
+        {% if project.workspace_path %}
+          <a class="button secondary" href="{% url 'projects:open' project.pk %}">文件</a>
+        {% endif %}
+      {% else %}
+        <span class="button secondary is-disabled" aria-disabled="true" title="文件工作区仅项目所有者可访问">文件</span>
+      {% endif %}
+    </div>
+  </div>
+{% endblock %}
+
+{% block content %}
+<div class="board-layout" data-board
+     data-selected="{% if editing_task %}{{ editing_task.pk }}{% endif %}"
+     data-task-count="{{ tasks|length }}">
+
+  <section class="board-main" aria-label="任务时间树">
+    <div class="canvas-toolbar" role="toolbar" aria-label="画布工具">
+      <label class="canvas-search" for="board-search">
+        <span class="sr-only">搜索任务标题、内容或负责人</span>
+        <input type="search" id="board-search" placeholder="搜索任务…" autocomplete="off" spellcheck="false">
+      </label>
+      <span class="canvas-count" data-count aria-live="polite">{{ tasks|length }} 个任务</span>
+      {% if is_owner and tasks %}
+        <button type="button" class="button primary" data-open-dialog="task-dialog">新建任务</button>
+      {% endif %}
+      <div class="canvas-tools">
+        <div class="view-switch" role="group" aria-label="视图切换">
+          <button type="button" data-view-btn="canvas" aria-pressed="true">画布</button>
+          <button type="button" data-view-btn="list" aria-pressed="false">列表</button>
+        </div>
+        <span class="zoom-group" role="group" aria-label="缩放">
+          <button type="button" class="tool-button" data-zoom-out aria-label="缩小">−</button>
+          <span class="zoom-label" data-zoom-label>100%</span>
+          <button type="button" class="tool-button" data-zoom-in aria-label="放大">+</button>
+        </span>
+        <button type="button" class="tool-button" data-collapse-all aria-pressed="false">折叠全部</button>
+        <button type="button" class="tool-button" data-reset>重置</button>
+      </div>
+    </div>
+
+    <noscript>
+      <p class="noscript-note">未启用 JavaScript：画布工具不可用，已显示任务列表；下方表单可直接填写并提交。</p>
+    </noscript>
+
+    {% if not tasks %}
+      <div class="canvas-empty" data-empty>
+        {% if is_owner %}
+          <p class="empty-eyebrow">开始协作</p>
+          <h2>这个项目还没有任务</h2>
+          <p class="empty-lede">选择工作空间，组建团队，再把整体目标逐步拆分成任务。</p>
+          <ol class="setup-steps">
+            <li class="setup-step{% if project.workspace_path %} is-done{% endif %}">
+              <span class="step-index" aria-hidden="true">1</span>
+              <div class="step-body">
+                <strong>选择工作空间</strong>
+                <p>文件夹只在本机读写，需要显式授权；选择文件夹本身不会授权。</p>
+                {% if project.workspace_path %}
+                  <p class="step-value"><span class="dir">{{ project.workspace_path }}</span></p>
+                {% endif %}
+                <div class="step-actions">
+                  <button type="button" class="button secondary" data-pick-folder>选择文件夹…</button>
+                  <a class="button ghost" href="#board-workspace">授权并保存路径</a>
+                </div>
+              </div>
+            </li>
+            <li class="setup-step{% if members|length > 1 %} is-done{% endif %}">
+              <span class="step-index" aria-hidden="true">2</span>
+              <div class="step-body">
+                <strong>添加团队</strong>
+                <p>真人成员用已有用户名精确添加；AI 只是分工角色，显示为未连接，不会执行任务。</p>
+                <div class="step-actions">
+                  <button type="button" class="button secondary" data-open-dialog="member-dialog">添加真人 / AI</button>
+                </div>
+              </div>
+            </li>
+            <li class="setup-step">
+              <span class="step-index" aria-hidden="true">3</span>
+              <div class="step-body">
+                <strong>创建整体任务</strong>
+                <p>填写标题、内容、负责人和起止日期；之后可在节点上拆分多级子任务。</p>
+                <div class="step-actions">
+                  <button type="button" class="button primary" data-open-dialog="task-dialog">创建整体任务</button>
+                </div>
+              </div>
+            </li>
+          </ol>
+        {% else %}
+          <p class="empty-eyebrow">空画布</p>
+          <h2>这个项目还没有任务</h2>
+          <p class="empty-lede">项目所有者还没有创建任务。任务出现后，这里会按日期显示时间树；你的进度更新会同步到画布。</p>
+        {% endif %}
+      </div>
+    {% endif %}
+
+    <div class="board-canvas" data-canvas hidden>
+      <div class="canvas-scroll" data-canvas-scroll tabindex="0" aria-label="任务时间树画布，可横向滚动">
+        <div class="canvas-stage" data-canvas-stage>
+          <div class="canvas-ruler" data-ruler aria-hidden="true"></div>
+          <div class="canvas-body" data-canvas-body>
+            <svg class="canvas-links" data-links aria-hidden="true"></svg>
+            <div class="canvas-nodes" data-nodes></div>
+          </div>
+        </div>
+      </div>
+      <div class="canvas-legend">
+        <span class="legend-link" aria-hidden="true"></span>
+        连线表示任务拆分；横向位置对应开始日期，节点内显示起止时间。
+      </div>
+    </div>
+
+    {% if tasks %}
+      <div class="canvas-outline" data-outline-fallback>
+        <p class="outline-hint">任务列表（无脚本降级视图）</p>
+        <ul class="outline-list">
+          {% for task in tasks %}
+            <li class="outline-row">
+              <a class="outline-title" href="?task={{ task.pk }}#board-side">{{ task.title }}</a>
+              <span class="chip chip-{{ task.status }}">{{ task.get_status_display }}</span>
+              <span class="outline-meta">
+                {% if task.parent_id %}子任务{% else %}整体任务{% endif %}
+                · {{ task.start_date|date:"Y-m-d" }} → {{ task.end_date|date:"Y-m-d" }}
+                · {% if task.assignee %}{{ task.assignee.name }}{% else %}未分配{% endif %}
+              </span>
+            </li>
+          {% endfor %}
+        </ul>
+      </div>
+      <div class="canvas-outline" data-outline-tree hidden></div>
     {% endif %}
   </section>
 
-  {% if is_owner %}
-    <section class="card" aria-label="工作空间">
-      <h2>工作空间</h2>
-      <p class="muted">当前位置：{{ project.workspace_path|default:'未设置' }}</p>
-      <p class="muted">授权只保存本次登录的访问权限，不会复制或上传文件。</p>
-      <form method="post" action="{% url 'projects:board_workspace' project.pk %}">
-        {% csrf_token %}{{ workspace_form.as_p }}
-        <button type="submit" class="primary">授权并设为工作空间</button>
-      </form>
-    </section>
+  <aside class="board-side" id="board-side" aria-label="任务详情与团队">
+    <div class="side-tabs" role="tablist" aria-label="侧栏面板">
+      <button type="button" role="tab" id="tab-detail" aria-controls="panel-detail"
+              aria-selected="{% if editing_task %}true{% else %}false{% endif %}"
+              data-tab="detail">详情</button>
+      <button type="button" role="tab" id="tab-team" aria-controls="panel-team"
+              aria-selected="{% if editing_task %}false{% else %}true{% endif %}"
+              data-tab="team">团队</button>
+    </div>
 
-    <section class="card" aria-label="创建任务">
-      <h2>创建任务</h2>
-      <form method="post" action="{% url 'projects:task_add' project.pk %}">
-        {% csrf_token %}{{ task_form.as_p }}
-        <button type="submit" class="primary">创建任务</button>
-      </form>
-    </section>
-  {% endif %}
+    <section class="side-panel" id="panel-detail" role="tabpanel" aria-labelledby="tab-detail">
+      {% if editing_task %}
+        <header class="detail-head">
+          <span class="chip chip-{{ editing_task.status }}">{{ editing_task.get_status_display }}</span>
+          <h2>{{ editing_task.title }}</h2>
+          <p class="detail-meta">
+            {{ editing_task.start_date|date:"Y-m-d" }} → {{ editing_task.end_date|date:"Y-m-d" }}
+            · {% if editing_task.assignee %}{{ editing_task.assignee.name }}{% else %}未分配{% endif %}
+            {% if editing_task.parent %}<br>子任务 · 父任务：{{ editing_task.parent.title }}{% endif %}
+          </p>
+        </header>
 
-  <section class="card" aria-label="任务">
-    <h2>任务</h2>
-    {% if tasks %}
-      <ul class="task-list">
-        {% for task in tasks %}
-          <li class="task" data-task-id="{{ task.pk }}">
-            <a href="{% url 'projects:board' project.pk %}?task={{ task.pk }}">{{ task.title }}</a>
-            <span class="status">{{ task.get_status_display }}</span>
-            <span class="muted">
-              {% if task.parent_id %}子任务 · 父任务 #{{ task.parent_id }}{% else %}整体任务{% endif %}
-              · {{ task.start_date }} → {{ task.end_date }}
-              · 负责人：{% if task.assignee %}{{ task.assignee.name }}{% else %}未分配{% endif %}
-            </span>
-            {% if not is_owner and my_member and task.assignee_id == my_member.pk %}
-              <form method="post" action="{% url 'projects:task_update' project.pk task.pk %}">
-                {% csrf_token %}
-                <label>状态
-                  <select name="status">
-                    {% for value, label in status_choices %}
-                      <option value="{{ value }}"{% if value == task.status %} selected{% endif %}>{{ label }}</option>
-                    {% endfor %}
-                  </select>
-                </label>
-                <button type="submit">更新我的进度</button>
-              </form>
-            {% endif %}
-          </li>
-        {% endfor %}
-      </ul>
-    {% else %}
-      <p class="empty">还没有任务{% if is_owner %}，先创建整体任务。{% else %}。{% endif %}</p>
-    {% endif %}
-    {% if tasks %}
-      <p class="muted">按开始日期排列；父任务表示拆分关系，不代表先后顺序。</p>
-    {% endif %}
-  </section>
+        {% if editing_task.description %}
+          <p class="detail-desc">{{ editing_task.description|linebreaksbr }}</p>
+        {% else %}
+          <p class="muted">没有填写任务内容。</p>
+        {% endif %}
 
-  {% if editing_task %}
-    <section class="card" aria-label="任务详情">
-      <h2>{{ editing_task.title }}</h2>
-      <p class="muted">
-        {{ editing_task.get_status_display }} ·
-        {{ editing_task.start_date }} → {{ editing_task.end_date }} ·
-        {% if editing_task.assignee %}负责人：{{ editing_task.assignee.name }}{% else %}未分配{% endif %}
-      </p>
-      <p>{{ editing_task.description|linebreaksbr }}</p>
-      {% if edit_form %}
-        <form method="post" action="{% url 'projects:task_update' project.pk editing_task.pk %}">
-          {% csrf_token %}{{ edit_form.as_p }}
-          <button type="submit" class="primary">保存</button>
-        </form>
+        {% if is_owner and edit_form %}
+          <form class="detail-form" method="post" action="{% url 'projects:task_update' project.pk editing_task.pk %}">
+            {% csrf_token %}
+            {{ edit_form.non_field_errors }}
+            <div class="field">
+              <label for="edit-title">任务标题</label>
+              <input id="edit-title" name="title" type="text" maxlength="160" required value="{{ edit_form.title.value|default:'' }}">
+              {{ edit_form.title.errors }}
+            </div>
+            <div class="field">
+              <label for="edit-description">任务内容</label>
+              <textarea id="edit-description" name="description" maxlength="4000" rows="4">{{ edit_form.description.value|default:'' }}</textarea>
+              {{ edit_form.description.errors }}
+            </div>
+            <div class="field-row">
+              <div class="field">
+                <label for="edit-assignee">负责人</label>
+                <select id="edit-assignee" name="assignee">
+                  <option value="">未分配</option>
+                  {% for member in members %}
+                    <option value="{{ member.pk }}"{% if edit_form.assignee.value|stringformat:"s" == member.pk|stringformat:"s" %} selected{% endif %}>{{ member.name }}{% if member.kind == 'ai' %}（AI · 未连接）{% endif %}</option>
+                  {% endfor %}
+                </select>
+                {{ edit_form.assignee.errors }}
+              </div>
+              <div class="field">
+                <label for="edit-status">状态</label>
+                <select id="edit-status" name="status">
+                  {% for value, label in status_choices %}
+                    <option value="{{ value }}"{% if edit_form.status.value == value %} selected{% endif %}>{{ label }}</option>
+                  {% endfor %}
+                </select>
+                {{ edit_form.status.errors }}
+              </div>
+            </div>
+            <div class="field-row">
+              <div class="field">
+                <label for="edit-start">开始日期</label>
+                <input id="edit-start" name="start_date" type="date" required value="{% if edit_form.start_date.value %}{{ edit_form.start_date.value|stringformat:"s" }}{% endif %}">
+                {{ edit_form.start_date.errors }}
+              </div>
+              <div class="field">
+                <label for="edit-end">结束日期</label>
+                <input id="edit-end" name="end_date" type="date" required value="{% if edit_form.end_date.value %}{{ edit_form.end_date.value|stringformat:"s" }}{% endif %}">
+                {{ edit_form.end_date.errors }}
+              </div>
+            </div>
+            <div class="actions">
+              <button type="submit" class="primary">保存任务</button>
+              <a class="button ghost" href="{% url 'projects:board' project.pk %}">取消</a>
+            </div>
+          </form>
+          <div class="detail-actions">
+            <a class="button secondary" href="?task={{ editing_task.pk }}&amp;new=child" data-new-child="{{ editing_task.pk }}">拆分子任务</a>
+          </div>
+        {% elif edit_form %}
+          <form class="detail-form" method="post" action="{% url 'projects:task_update' project.pk editing_task.pk %}">
+            {% csrf_token %}
+            {{ edit_form.non_field_errors }}
+            <div class="field">
+              <label for="edit-status">我的任务状态</label>
+              <select id="edit-status" name="status">
+                {% for value, label in status_choices %}
+                  <option value="{{ value }}"{% if edit_form.status.value == value %} selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+              </select>
+              {{ edit_form.status.errors }}
+            </div>
+            <button type="submit" class="primary">更新我的进度</button>
+            <p class="hint">成员只能更新分配给自己任务的进度状态，其它字段由项目所有者管理。</p>
+          </form>
+        {% else %}
+          <p class="side-note">只有项目所有者可以修改任务结构、负责人和日期；你只能更新分配给自己任务的进度。</p>
+        {% endif %}
+      {% else %}
+        <p class="side-empty">在画布上点选任务节点，或从列表打开，查看详情与可编辑字段。</p>
+        <dl class="side-stats">
+          <div><dt>任务</dt><dd>{{ tasks|length }}</dd></div>
+          <div><dt>团队</dt><dd>{{ members|length }}</dd></div>
+        </dl>
+        {% if is_owner and tasks %}
+          <button type="button" class="button primary" data-open-dialog="task-dialog">新建任务</button>
+        {% endif %}
       {% endif %}
     </section>
-  {% endif %}
 
-  {{ canvas_data|json_script:"canvas-data" }}
+    <section class="side-panel" id="panel-team" role="tabpanel" aria-labelledby="tab-team">
+      <div class="panel-head">
+        <h2>团队</h2>
+        {% if is_owner %}
+          <button type="button" class="button secondary" data-open-dialog="member-dialog">添加成员</button>
+        {% endif %}
+      </div>
+      <ul class="team-list">
+        {% for member in members %}
+          <li class="team-member">
+            <span class="avatar{% if member.kind == 'ai' %} ai{% endif %}" aria-hidden="true">{{ member.name|slice:":1"|upper }}</span>
+            <div class="team-info">
+              <p class="team-name">
+                {{ member.name }}
+                {% if member.user_id == project.owner_id %}<span class="owner-tag">所有者</span>{% endif %}
+              </p>
+              <p class="team-meta">
+                {% if member.kind == 'ai' %}<span class="kind-tag ai">AI · 未连接</span>{% else %}<span class="kind-tag">真人</span>{% endif %}
+                <span>{{ member.role|default:'未填写分工' }}</span>
+              </p>
+              {% if is_owner %}
+                <details class="role-edit">
+                  <summary>修改角色</summary>
+                  <form method="post" action="{% url 'projects:member_update' project.pk member.pk %}">
+                    {% csrf_token %}
+                    <label class="sr-only" for="role-{{ member.pk }}">分工角色</label>
+                    <input id="role-{{ member.pk }}" type="text" name="role" value="{{ member.role }}" maxlength="80" placeholder="例如：前端 / 测试">
+                    <button type="submit" class="tool-button">保存角色</button>
+                  </form>
+                </details>
+              {% endif %}
+            </div>
+          </li>
+        {% empty %}
+          <li class="side-empty">还没有成员。</li>
+        {% endfor %}
+      </ul>
+      <p class="side-note">AI 成员只表示分工角色，未连接任何模型或工具，不会自动执行任务。邀请链接为后续功能。</p>
+    </section>
+
+    {% if is_owner %}
+      <section class="side-panel side-workspace" id="board-workspace" aria-labelledby="workspace-title">
+        <h2 id="workspace-title">工作空间</h2>
+        {% if project.workspace_path %}
+          <p class="muted">已关联文件夹：<span class="dir">{{ project.workspace_path }}</span></p>
+        {% else %}
+          <p class="muted">尚未选择文件夹；项目成员不会看到或获得本机文件访问。</p>
+        {% endif %}
+        {% if workspace_form %}
+          <form method="post" action="{% url 'projects:board_workspace' project.pk %}" data-workspace-form>
+            {% csrf_token %}
+            <div class="field">
+              <label for="workspace-path">文件夹完整路径</label>
+              <input id="workspace-path" type="text" name="path" maxlength="1024" autocomplete="off" spellcheck="false"
+                     value="{{ workspace_form.path.value|default:'' }}" placeholder="例如 D:\项目\笔记">
+              {{ workspace_form.path.errors }}
+            </div>
+            <div class="actions">
+              <button type="button" class="button secondary" data-pick-folder>选择文件夹…</button>
+              <button type="submit" class="button primary" id="workspace-submit">授权并设为工作空间</button>
+            </div>
+            <p class="hint" data-picker-note>选择文件夹只填入路径，不会自动授权；点击“授权并设为工作空间”才会保存并授权。</p>
+          </form>
+        {% endif %}
+        {% if project.workspace_path %}
+          <p class="workspace-open"><a class="button ghost" href="{% url 'projects:open' project.pk %}">打开文件工作区</a></p>
+        {% endif %}
+      </section>
+    {% else %}
+      <section class="side-panel side-workspace" aria-labelledby="workspace-title-member">
+        <h2 id="workspace-title-member">工作空间</h2>
+        <p class="muted">文件工作区仅项目所有者可访问；成员不会看到文件夹位置、授权记录，也不能读写文件。</p>
+        <button type="button" class="button secondary" disabled>打开文件工作区（仅所有者）</button>
+      </section>
+    {% endif %}
+  </aside>
 </div>
+
+{% if is_owner %}
+  <dialog id="task-dialog" class="board-dialog" aria-labelledby="task-dialog-title"{% if task_form.errors %} data-open-on-load{% endif %}>
+    <div class="dialog-bar">
+      <h2 id="task-dialog-title">新建任务</h2>
+      <button type="button" class="dialog-close" data-close-dialog aria-label="关闭">×</button>
+    </div>
+    <form class="dialog-form" method="post" action="{% url 'projects:task_add' project.pk %}" data-task-create-form>
+      {% csrf_token %}
+      {{ task_form.non_field_errors }}
+      <div class="field">
+        <label for="new-task-title">任务标题</label>
+        <input id="new-task-title" name="title" type="text" maxlength="160" required value="{{ task_form.title.value|default:'' }}">
+        {{ task_form.title.errors }}
+      </div>
+      <div class="field">
+        <label for="new-task-description">任务内容</label>
+        <textarea id="new-task-description" name="description" maxlength="4000" rows="3">{{ task_form.description.value|default:'' }}</textarea>
+        {{ task_form.description.errors }}
+      </div>
+      <div class="field">
+        <label for="new-task-parent">父任务（拆分为子任务）</label>
+        <select id="new-task-parent" name="parent">
+          <option value="">无，作为整体任务</option>
+          {% for item in tasks %}
+            <option value="{{ item.pk }}"{% if task_form.parent.value|stringformat:"s" == item.pk|stringformat:"s" %} selected{% endif %}>{{ item.title }}</option>
+          {% endfor %}
+        </select>
+        {{ task_form.parent.errors }}
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label for="new-task-assignee">负责人</label>
+          <select id="new-task-assignee" name="assignee">
+            <option value="">未分配</option>
+            {% for member in members %}
+              <option value="{{ member.pk }}"{% if task_form.assignee.value|stringformat:"s" == member.pk|stringformat:"s" %} selected{% endif %}>{{ member.name }}{% if member.kind == 'ai' %}（AI · 未连接）{% endif %}</option>
+            {% endfor %}
+          </select>
+          {{ task_form.assignee.errors }}
+        </div>
+        <div class="field">
+          <label for="new-task-status">状态</label>
+          <select id="new-task-status" name="status">
+            {% for value, label in status_choices %}
+              <option value="{{ value }}"{% if task_form.status.value == value %} selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+          </select>
+          {{ task_form.status.errors }}
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label for="new-task-start">开始日期</label>
+          <input id="new-task-start" name="start_date" type="date" required value="{% if task_form.start_date.value %}{{ task_form.start_date.value|stringformat:"s" }}{% endif %}">
+          {{ task_form.start_date.errors }}
+        </div>
+        <div class="field">
+          <label for="new-task-end">结束日期</label>
+          <input id="new-task-end" name="end_date" type="date" required value="{% if task_form.end_date.value %}{{ task_form.end_date.value|stringformat:"s" }}{% endif %}">
+          {{ task_form.end_date.errors }}
+        </div>
+      </div>
+      <div class="actions">
+        <button type="submit" class="primary">创建任务</button>
+        <button type="button" class="button ghost" data-close-dialog>取消</button>
+      </div>
+      <p class="hint">日期决定节点在时间树上的横向位置；父任务只表示拆分关系。</p>
+    </form>
+  </dialog>
+
+  <dialog id="member-dialog" class="board-dialog" aria-labelledby="member-dialog-title"{% if member_form.errors %} data-open-on-load{% endif %}>
+    <div class="dialog-bar">
+      <h2 id="member-dialog-title">添加团队成员</h2>
+      <button type="button" class="dialog-close" data-close-dialog aria-label="关闭">×</button>
+    </div>
+    <form class="dialog-form" method="post" action="{% url 'projects:member_add' project.pk %}" data-member-form>
+      {% csrf_token %}
+      {{ member_form.non_field_errors }}
+      <div class="field">
+        <label for="member-kind">类型</label>
+        <select id="member-kind" name="kind" data-member-kind>
+          <option value="human"{% if member_form.kind.value != 'ai' %} selected{% endif %}>真人（已有账号）</option>
+          <option value="ai"{% if member_form.kind.value == 'ai' %} selected{% endif %}>AI 角色（未连接）</option>
+        </select>
+      </div>
+      <div class="field" data-member-human>
+        <label for="member-username">已有账号用户名</label>
+        <input id="member-username" name="username" type="text" maxlength="150" autocomplete="off" value="{{ member_form.username.value|default:'' }}">
+        <p class="hint">精确匹配一个已注册账号，不会自动创建账号。</p>
+        {{ member_form.username.errors }}
+      </div>
+      <div class="field" data-member-ai>
+        <label for="member-name">AI 成员名称</label>
+        <input id="member-name" name="name" type="text" maxlength="80" value="{{ member_form.name.value|default:'' }}">
+        <p class="hint">仅作为分工角色保存；不会连接模型、调用工具或执行任务。</p>
+        {{ member_form.name.errors }}
+      </div>
+      <div class="field">
+        <label for="member-role">分工角色</label>
+        <input id="member-role" name="role" type="text" maxlength="80" value="{{ member_form.role.value|default:'' }}" placeholder="例如：项目经理 / 前端 / 后端 / 测试">
+      </div>
+      <div class="actions">
+        <button type="submit" class="primary">添加成员</button>
+        <button type="button" class="button ghost" data-close-dialog>取消</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="folder-picker" aria-labelledby="picker-title">
+    <div class="picker-head">
+      <h2 id="picker-title">选择文件夹</h2>
+      <button type="button" class="secondary" id="picker-close">关闭</button>
+    </div>
+    <p class="hint">只列出文件夹名称和路径，不读取文件内容，也不会直接授权；选择后仍需点击“授权并设为工作空间”。</p>
+    <p class="muted">当前位置：<span class="dir" id="picker-current">驱动器</span></p>
+    <form id="picker-path-form" class="actions">
+      <label for="picker-path" class="muted path-label">目录完整路径</label>
+      <input type="text" class="path-input" id="picker-path" autocomplete="off" spellcheck="false">
+      <button type="submit" class="secondary">打开目录</button>
+    </form>
+    <div class="actions">
+      <button type="button" class="secondary" id="picker-up">返回上级</button>
+      <button type="button" class="primary" id="picker-choose" disabled>使用此文件夹</button>
+    </div>
+    <p class="hint" id="picker-status" role="status" aria-live="polite"></p>
+    <ul class="files picker-list" id="picker-list"></ul>
+  </dialog>
+  <noscript>
+    <style>
+      dialog.board-dialog, #folder-picker {
+        position: static;
+        display: block;
+        flex: 1 1 100%;
+        width: auto;
+        max-height: none;
+        margin: 16px 12px;
+      }
+      #folder-picker { display: none; }
+    </style>
+  </noscript>
+{% endif %}
+
+{{ canvas_data|json_script:"canvas-data" }}
+{% endblock %}
+
+{% block scripts %}
+  <script src="{% static 'projects/canvas.js' %}" defer></script>
 {% endblock %}

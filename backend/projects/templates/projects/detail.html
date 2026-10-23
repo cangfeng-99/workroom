@@ -1,11 +1,12 @@
 {% extends 'projects/base.html' %}
 {% block title %}{{ project.name }} · AI协作工作台{% endblock %}
 {% block heading %}
-  <p class="eyebrow">工作台 / 项目详情</p>
+  <p class="eyebrow">工作台 / 项目设置</p>
   <h1>{{ project.name }}</h1>
   {% if project.description %}<p class="page-sub">{{ project.description }}</p>{% endif %}
 {% endblock %}
 {% block content %}
+  <p class="back-link"><a href="{% url 'projects:board' project.pk %}">← 返回协作画布</a></p>
   <section class="card">
     <div class="card-head">
       <div>

@@ -5,7 +5,7 @@
   <div class="heading-row">
     <div>
       <h1>我的项目</h1>
-      <p class="page-sub">项目只记住文件夹位置；文件访问还需要在项目工作区显式授权，独立工作区的授权不会自动成为项目权限。</p>
+      <p class="page-sub">点击项目名称进入协作画布；文件夹位置与访问授权在“设置”中管理。文件访问仍需在项目工作区显式授权，独立工作区的授权不会自动成为项目权限。</p>
     </div>
     <div class="heading-actions">
       <a class="button primary" href="{% url 'projects:new' %}">新建项目</a>
@@ -72,12 +72,13 @@
             <span class="project-icon" aria-hidden="true">{{ project.name|slice:":1" }}</span>
             <div class="project-info">
               <div class="title-line">
-                <a class="project-title" href="{% url 'projects:detail' project.pk %}">{{ project.name }}</a>
+                <a class="project-title" href="{% url 'projects:board' project.pk %}">{{ project.name }}</a>
                 {% if project.authorized %}
                   <span class="status on">已授权，可读写</span>
                 {% else %}
                   <span class="status off">尚未授权</span>
                 {% endif %}
+                <a class="muted" href="{% url 'projects:detail' project.pk %}">设置</a>
               </div>
               <p class="meta-line">
                 {% if project.workspace_path %}已关联位置：<span class="dir">{{ project.workspace_path }}</span>{% else %}尚未关联文件夹{% endif %}
