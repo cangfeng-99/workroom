@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>本机演示工作区</title>
+  <title>本机文件夹工作区</title>
   <style>
     :root { color-scheme: light; }
     * { box-sizing: border-box; }
@@ -13,62 +13,92 @@
     h1 { font-size: 1.5rem; margin: 0 0 8px; }
     h2 { font-size: 1.1rem; margin: 0 0 12px; }
     .muted { color: #57606a; font-size: 0.92rem; }
-    .card { background: #fff; border: 1px solid #d8dee4; border-radius: 10px; padding: 20px; }
+    .card { background: #fff; border: 1px solid #d8dee4; border-radius: 10px; padding: 20px; min-width: 0; }
     .status { display: inline-block; padding: 2px 10px; border-radius: 999px; font-size: 0.85rem; font-weight: 600; }
     .status.on { background: #dafbe1; color: #1a7f37; }
     .status.off { background: #fff1e5; color: #9a3412; }
     .dir { font-family: ui-monospace, Consolas, monospace; background: #f0f3f6; padding: 2px 6px; border-radius: 4px; word-break: break-all; }
-    .actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px; }
+    .actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px; align-items: center; }
     button { font: inherit; padding: 8px 16px; border-radius: 8px; border: 1px solid transparent; cursor: pointer; }
     button.primary { background: #1f6feb; color: #fff; }
     button.secondary { background: #fff; border-color: #d0d7de; color: #1f2328; }
     button.danger { background: #fff; border-color: #cf222e; color: #cf222e; }
     button:hover { filter: brightness(0.96); }
     :focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visible { outline: 3px solid #0969da; outline-offset: 2px; }
-    .alert { margin: 16px 0 0; padding: 10px 14px; border-radius: 8px; }
+    .alert { margin: 16px 0 0; padding: 10px 14px; border-radius: 8px; overflow-wrap: anywhere; }
     .alert.error { background: #ffebe9; border: 1px solid #ffcecb; color: #82071e; }
     .alert.notice { background: #ddf4ff; border: 1px solid #b6e3ff; color: #0a3069; }
     .grid { display: grid; gap: 16px; margin-top: 20px; }
     @media (min-width: 760px) { .grid { grid-template-columns: 260px 1fr; align-items: start; } }
     ul.files { list-style: none; margin: 0; padding: 0; }
     ul.files li + li { margin-top: 4px; }
-    ul.files a { display: block; padding: 6px 8px; border-radius: 6px; color: #0969da; text-decoration: none; word-break: break-all; }
+    ul.files a { display: block; padding: 6px 8px; border-radius: 6px; color: #0969da; text-decoration: none; overflow-wrap: anywhere; }
     ul.files a:hover { background: #f0f6ff; }
     ul.files a[aria-current="true"] { background: #e7f0ff; font-weight: 600; }
-    pre.content { margin: 0; padding: 12px; background: #f6f8fa; border: 1px solid #d8dee4; border-radius: 8px; white-space: pre-wrap; word-break: break-word; min-height: 120px; }
-    form.newfile { margin-top: 20px; }
+    .kind { color: #57606a; font-size: 0.82rem; margin-right: 6px; }
+    .breadcrumb { margin: 8px 0 0; overflow-wrap: anywhere; }
+    form.inline { display: inline; }
     .field { margin-bottom: 14px; }
     label { display: block; font-weight: 600; margin-bottom: 6px; }
-    input[type="text"], textarea { width: 100%; font: inherit; padding: 8px 10px; border: 1px solid #d0d7de; border-radius: 8px; background: #fff; }
-    textarea { resize: vertical; }
+    input[type="text"], textarea { width: 100%; max-width: 100%; font: inherit; padding: 8px 10px; border: 1px solid #d0d7de; border-radius: 8px; background: #fff; }
+    textarea { resize: vertical; font-family: ui-monospace, Consolas, monospace; }
     .empty { color: #57606a; padding: 6px 0; }
+    .hint { color: #57606a; font-size: 0.88rem; margin: 8px 0 0; overflow-wrap: anywhere; }
+    .stack { margin-top: 16px; }
+    details summary { cursor: pointer; font-weight: 600; margin-top: 12px; }
+    details form { margin-top: 12px; }
   </style>
 </head>
 <body>
   <main>
     <header>
-      <h1>本机演示工作区</h1>
-      <p class="muted">文件只保存在本机项目目录中，不会上传或执行。</p>
+      <h1>本机文件夹工作区</h1>
+      <p class="muted">页面只读写你授权的本机文件夹；内容不会上传，也不会被执行。</p>
       {% if granted %}
         <p><span class="status on">已授权</span></p>
-      {% else %}
-        <p><span class="status off">未授权</span></p>
-      {% endif %}
-      <p class="muted">固定目录：<span class="dir">{{ root_display }}</span></p>
-
-      {% if granted %}
+        <p class="muted">根目录：<span class="dir">{{ root_path }}</span></p>
+        <p class="muted">当前目录：<span class="dir">{% if current_dir %}{{ current_dir }}{% else %}（根目录）{% endif %}</span></p>
         <form method="post" class="actions">
           {% csrf_token %}
           <input type="hidden" name="action" value="revoke">
           <button type="submit" class="danger">撤销授权</button>
         </form>
       {% else %}
-        <p class="muted">授权后可以列出、读取并创建 .txt、.md 文本文件；撤销后文件操作会被拒绝。</p>
+        <p><span class="status off">未授权</span></p>
+        <p class="muted">授权一个已存在的本机文件夹后，才能浏览、读取、编辑和新建其中的文本文件。授权不会创建目录或欢迎文件。</p>
+        <form method="post" class="actions">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="pick">
+          <button type="submit" class="secondary">选择文件夹…</button>
+          <span class="muted">点击后打开 Windows 文件夹对话框，仅填充路径，不直接授权。</span>
+        </form>
         <form method="post" class="actions">
           {% csrf_token %}
           <input type="hidden" name="action" value="grant">
-          <button type="submit" class="primary">授权使用演示工作区</button>
+          <label for="grant-path" class="muted" style="margin:0;">文件夹完整路径</label>
+          <input type="text" id="grant-path" name="path" value="{{ grant_path }}" placeholder="例如 D:\项目\笔记" style="flex:1 1 260px; width:auto;">
+          <button type="submit" class="primary">授权此文件夹</button>
         </form>
+      {% endif %}
+
+      {% if granted %}
+        <details{% if grant_path %} open{% endif %}>
+          <summary>更换文件夹</summary>
+          <p class="hint">切换后旧页面上的保存或新建会因授权 ID 不匹配而被拒绝，不会写入新目录。</p>
+          <form method="post" class="actions">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="pick">
+            <button type="submit" class="secondary">选择文件夹…</button>
+            <span class="muted">仅填充下方路径，仍需再次点击授权。</span>
+          </form>
+          <form method="post" class="actions">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="grant">
+            <label for="grant-path" class="muted">文件夹完整路径</label>
+            <input type="text" id="grant-path" name="path" value="{{ grant_path }}" placeholder="输入另一个文件夹的完整路径" style="flex:1 1 260px; width:auto;">
+            <button type="submit" class="primary">授权此文件夹</button>
+          </form>
+        </details>
       {% endif %}
 
       {% if error %}<p class="alert error" role="alert">{{ error }}</p>{% endif %}
@@ -79,45 +109,79 @@
     {% if granted %}
       <div class="grid">
         <section class="card" aria-labelledby="files-title">
-          <h2 id="files-title">文件列表</h2>
-          {% if files %}
+          <h2 id="files-title">目录内容</h2>
+          <p class="breadcrumb">
+            <a href="?dir=">根目录</a>
+            {% if current_dir %}/ <span class="dir">{{ current_dir }}</span>
+              <br><a href="?dir={{ parent_dir|urlencode }}">返回上级</a>
+            {% endif %}
+          </p>
+          {% if entries %}
             <ul class="files">
-              {% for name in files %}
-                <li><a href="?file={{ name|urlencode }}"{% if name == selected %} aria-current="true"{% endif %}>{{ name }}</a></li>
+              {% for entry in entries %}
+                <li>
+                  {% if entry.kind == 'dir' %}
+                    <a href="?dir={{ entry.path|urlencode }}"><span class="kind">目录</span>{{ entry.name }}</a>
+                  {% else %}
+                    <a href="?dir={{ current_dir|urlencode }}&amp;file={{ entry.path|urlencode }}"{% if save_form and save_form.path.value == entry.path %} aria-current="true"{% endif %}><span class="kind">文件</span>{{ entry.name }}</a>
+                  {% endif %}
+                </li>
               {% endfor %}
             </ul>
+            {% if entries|length >= 100 %}
+              <p class="hint">当前目录最多显示 100 项，其余请进入子目录查看。</p>
+            {% endif %}
           {% else %}
-            <p class="empty">还没有文本文件，可以在右侧创建第一个。</p>
+            <p class="empty">这个目录里没有可浏览的子目录或受支持的文本文件。</p>
           {% endif %}
+          <p class="hint">仅显示普通文件夹和受支持的文本/代码文件（.txt .md .py .js .ts .json .html .css .vue .java .c .h .go 等），单文件最大 64 KiB；隐藏项、链接与多硬链文件不显示。</p>
         </section>
 
-        <section class="card" aria-labelledby="read-title">
-          <h2 id="read-title">文件内容</h2>
-          {% if selected %}
-            <p class="muted">正在查看：<strong>{{ selected }}</strong></p>
-            <pre class="content">{{ content }}</pre>
+        <section class="card" aria-labelledby="edit-title">
+          <h2 id="edit-title">编辑文件</h2>
+          {% if save_form %}
+            <p class="muted">正在编辑：<span class="dir">{{ save_form.path.value }}</span></p>
+            <form method="post" class="newfile">
+              {% csrf_token %}
+              <input type="hidden" name="action" value="save">
+              {{ save_form.grant_id }}
+              {{ save_form.path }}
+              {{ save_form.revision }}
+              <input type="hidden" name="directory" value="{{ current_dir }}">
+              <div class="field">
+                <label for="{{ save_form.content.id_for_label }}">{{ save_form.content.label }}</label>
+                {{ save_form.content }}
+              </div>
+              <div class="actions">
+                <button type="submit" class="primary">保存到原文件</button>
+                <a class="muted" href="?dir={{ current_dir|urlencode }}&amp;file={{ save_form.path.value|urlencode }}">重新读取</a>
+              </div>
+              <p class="hint">保存前会核对读取时的版本；若文件已被外部修改则拒绝保存，并保留你当前的编辑。失败时原文件不会被替换。</p>
+            </form>
           {% else %}
-            <p class="empty">从左侧选择一个文件即可读取。</p>
+            <p class="empty">从左侧目录选择一个文件即可读取并编辑。</p>
           {% endif %}
         </section>
       </div>
 
-      <section class="card" aria-labelledby="create-title" style="margin-top: 16px;">
-        <h2 id="create-title">创建文本文件</h2>
+      <section class="card stack" aria-labelledby="create-title">
+        <h2 id="create-title">在此目录新建文本文件</h2>
         <form method="post" class="newfile">
           {% csrf_token %}
           <input type="hidden" name="action" value="create">
+          {{ new_form.grant_id }}
+          {{ new_form.directory }}
           <div class="field">
-            <label for="{{ form.name.id_for_label }}">{{ form.name.label }}</label>
-            {{ form.name }}
-            <p class="muted">支持 .txt 和 .md，不能覆盖已有文件。</p>
+            <label for="{{ new_form.name.id_for_label }}">{{ new_form.name.label }}</label>
+            {{ new_form.name }}
+            <p class="hint">新建到当前目录；同名文件不会覆盖，请换一个名字。</p>
           </div>
           <div class="field">
-            <label for="{{ form.content.id_for_label }}">{{ form.content.label }}</label>
-            {{ form.content }}
-            <p class="muted">内容可以为空；最多 64 KiB。</p>
+            <label for="{{ new_form.content.id_for_label }}">{{ new_form.content.label }}</label>
+            {{ new_form.content }}
+            <p class="hint">内容可以为空；最多 64 KiB。</p>
           </div>
-          <button type="submit" class="primary">创建文件</button>
+          <button type="submit" class="primary">新建文件</button>
         </form>
       </section>
     {% endif %}

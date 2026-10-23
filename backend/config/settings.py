@@ -138,6 +138,7 @@ STATIC_URL = 'static/'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-# Local demo workspace. The root is a server-side trusted setting and must
-# never be derived from HTTP input.
+# Legacy demo root (kept for historical service tests only). The workspace page
+# now authorizes a user-chosen folder kept in the server-side session; every
+# path is still validated as an existing plain directory before any access.
 WORKSPACE_ROOT = PROJECT_ROOT / '.tools' / 'workspaces' / 'demo'

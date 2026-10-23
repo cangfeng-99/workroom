@@ -1,6 +1,43 @@
 # 当前任务
 
-## 最新快照（T009：本机工作区技术验收通过，待用户体验）
+## 最新快照（T010：实际文件夹工作区技术验收通过，待用户体验）
+- 版本PLAN-r3 / RULES-r6。状态ACCEPTED_BY_CODEX_WAITING_USER_REVIEW；用户选定的文件夹就是工作区，T009固定demo语义已由本次用户要求替代，不自动跨阶段。
+- 地址http://127.0.0.1:8000/workspace/，沿用本机服务exec session75882。选择文件夹或输入绝对路径→显式授权→浏览子目录→编辑保存回原文件→新建→撤销；授权不创建欢迎文件/目录，不导入demo。
+- WorkBuddy完成T010A/B；B通道300秒超时，原任务实际完成并回写记录，node20208自然退出后Codex才接手，没有重复派活或并发写入。
+- 授权按浏览器session，root+grant_id；create/save校验授权版本，换根后旧页不能误写；CSRF/no-store/转义及逐级路径/链接/硬链拒绝保留。保存核对revision，外部修改或写入失败不覆盖原文件且保留输入。
+- Codex补正：路径字段strip=False避免开头空格导致写错相邻文件/目录；两个表单ID与标签区分；取消选择保留文件列表；加5个回归并加强1个取消断言。版本比较内存变异被测试捕获，未修改实际源码。
+- 最终验证：pytest113 passed/1 skipped（真实文件symlink因Windows权限跳过；junction/硬链/模拟symlink已测）；ruff backend/tools通过，Django check0 issues，git diff --check通过。
+- 真实Chrome全流程通过：实际目录不写盘授权、子目录/特殊字符路径读写、磁盘核对、新建/重名拒绝、越界/CSRF/跨会话、冲突保留输入、换根旧grant拒绝、撤销；桌面/390px无横向溢出，无页面脚本错误。最终测试会话已撤销。
+- 边界：常见UTF8代码文本<=64KiB、每目录显示最多100项；隐藏/链接/多硬链不开放；不含AI/命令/删除重命名。原生Windows弹窗仅mock与Forms环境探测，尚未人工实点；手动路径已实测。不是OS沙箱，未防恶意本地并发替换。
+- 证据tasks/acceptance/T010.md、tasks/reports/T010-browser.json和T010-{desktop,mobile}.png；失败的两个浏览器选择器报告保留，已修正测试后全流程通过。
+- 下一步：用户在页面授权自己的目录并体验读写；按反馈修正本步，用户认可后再准备下一阶段。
+
+## 上一快照（T010B：实际文件夹授权与编辑已实现，待 Codex 复核）
+- 版本PLAN-r3 / RULES-r6；基于未提交T010A文件继续。状态DONE_PENDING_CODEX_REVIEW；仅WorkBuddy单执行者，未派agent、未联网/装依赖、未启动服务、未commit。复用运行中的127.0.0.1:8000（autoreload已加载新页面，GET 200）。
+- 改动：新增workspaces/picker.py；重写forms.py、views.py、workspace.html、test_views.py（31项）、test_picker.py（6项）；services.py仅补NUL二进制拒绝（binary_content）与回归；home入口文字、settings注释各一处。
+- 授权：session键workspace_grant_v2 = {root, grant_id}；旧workspace_grant_root仅用于撤销清理、从不读取；授权只validate_root()，不建目录/welcome，不复制demo；成功时cycle_key。
+- 页面：显示根完整路径、当前目录/根目录/返回上级；列目录+可编辑文件（100项上限提示）；读取进可编辑表单（含revision）；保存写回原处，冲突/失败保留输入并提示重新读取；新建不覆盖；撤销。390px靠单列布局、min-width:0、anywhere换行处理，未实测。
+- 安全：GET不写盘、不开对话框；所有POST保留CSRF、no-store、自动转义；create/save必须匹配本次grant_id，切换根后旧页403且不写入；跨会话/撤销/越界/链接/隐藏/硬链拒绝沿用服务层。
+- picker：固定PowerShell脚本常量+固定参数（-STA -NonInteractive -NoProfile -File），CREATE_NO_WINDOW，120s超时，取消/超时/失败分别提示；命令不含任何用户输入；mock测试6项；真实Windows对话框未实测。
+- 验证：pytest 108 passed/1 skipped（唯一跳过仍为无权限建symlink）；ruff backend tools All checks passed；Django check 0 issues。证据tasks/logs/T010B.log。
+- 未验证：真实原生对话框、真实Chrome浏览器流程与390px截图、实机手动编辑；由Codex浏览器验收补齐。下一步：Codex复核后交用户体验，不自动进入下一阶段。
+
+## 上一快照（T010A：文件服务完成，待 Codex 复核）
+- 版本PLAN-r3 / RULES-r6；基线a6e622c，Codex文档改动与spec保留未覆盖。状态DONE_PENDING_CODEX_REVIEW；仅WorkBuddy单执行者，未派agent、未联网、未装依赖、未启动服务、未commit。
+- 改动仅backend/workspaces/services.py、test_services.py及本文件/日志；HTTP、模板、选择器未动，旧demo页面兼容。
+- 新增：validate_root()只校验不写入；list_directory('')目录+可编辑文件条目（≤100，目录在前）；read_document->(content,sha256 revision)；save_text(path,content,expected_revision)原子替换；list_files(directory='')/read_text/create_text支持/分隔安全相对路径。
+- 安全：单一路径校验；逐级lstat普通目录，链接/reparse/隐藏拒绝；文件多硬链拒绝；UNC/设备根拒绝；外部变更conflict、文件消失not_found，失败清理临时文件且原文件不变；保存前复核inode与revision。
+- 验证：pytest backend/workspaces/test_services.py 73 passed/1 skipped（文件symlink环境权限跳过，junction/硬链实测）；pytest backend/workspaces 85 passed/1 skipped；ruff backend All checks passed。
+- 旧测试调整仅限边界正式变化：sub/escape改为合法子目录案例，后缀列表加入常见代码类型；越界/链接/硬链断言保留。证据tasks/logs/T010A.log。
+- 未做：权限位保留未单测；会话grant_id、授权/选择器/页面与HTTP验收属T010B。下一步：Codex复核后派T010B。
+
+## 上一快照（T010派发：按实际文件夹授权与编辑修正第一步）
+- 版本PLAN-r3 / RULES-r6；基线a6e622c，开工前git干净。用户直接纠正授权语义，继续第一步，不进入下一业务阶段。
+- T010A APPROVED：WorkBuddy扩展文件服务，支持根内相对路径、目录浏览、常见代码文本、版本检查保存。T010B随后接实际目录授权、原生选择器及页面。规格tasks/specs/T010-folder-workspace.md。
+- 只有WorkBuddy写实现；Codex先写规格再交接，之后只读复核。无其它活跃执行任务。服务127.0.0.1:8000仍运行，避免重复启动。
+- 不再把固定demo当用户工作区；授权不创建或改写任何用户文件。测试仅隔离临时目录或.tools测试夹。
+
+## 上一快照（T009：本机工作区技术验收通过，待用户体验）
 - 版本PLAN-r2 / RULES-r5。状态ACCEPTED_BY_CODEX_WAITING_USER_REVIEW；用户授权“开始第一步”的固定工作区闭环已完成，不自动推进下一业务阶段。
 - 访问http://127.0.0.1:8000/workspace/；服务当前运行于Codex exec session 75882，通过Run-Backend.cmd启动，仅127.0.0.1。再次启动前先确认8000端口，不重复启动。
 - 功能：授权固定.tools/workspaces/demo→列出/读取UTF8文本→新建不覆盖→撤销；浏览器会话隔离，保留CSRF/no-store/自动转义。最大64KiB，只支持根内普通.txt/.md，不支持任意目录/命令执行。

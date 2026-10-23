@@ -1,88 +1,119 @@
-"""Browser page for the fixed local demo workspace.
+"""Folder workspace page: authorize a real folder, browse, edit, save.
 
-The root always comes from ``settings.WORKSPACE_ROOT``; the browser can only
-choose a file name. Authorization lives in the server-side session and is
-checked on every read, list, and write.
+The authorized root lives in the server-side session together with a random
+``grant_id``. Every list/read/create/save re-checks that session, and writes
+must repeat the current ``grant_id`` so a page rendered before a root switch
+cannot write into the newly authorized folder. ``GET`` never writes and never
+opens the native dialog. The legacy demo key is never read.
 """
 
 from __future__ import annotations
 
+import uuid
 from pathlib import Path
+from urllib.parse import quote
 
-from django.conf import settings
 from django.contrib import messages
 from django.shortcuts import redirect, render
 from django.views.decorators.cache import never_cache
 from django.views.decorators.http import require_http_methods
 
-from workspaces.forms import NewFileForm
+from workspaces.forms import GrantForm, NewFileForm, SaveForm
+from workspaces.picker import PickerError, pick_folder
 from workspaces.services import Workspace, WorkspaceError
 
-SESSION_KEY = 'workspace_grant_root'
+SESSION_KEY = 'workspace_grant_v2'
+LEGACY_SESSION_KEY = 'workspace_grant_root'
 UNKNOWN_ACTION = '无法识别的操作，请刷新页面后重试。'
-NEED_GRANT = '请先授权本机演示工作区，然后再操作文件。'
-FORM_INVALID = '请填写文件名（内容可以为空）。'
+NEED_GRANT = '请先授权一个本机文件夹，然后再操作文件。'
+STALE_GRANT = '授权已变更或页面已过期，本次操作未写入任何文件。请刷新页面后重试。'
+FORM_INVALID = '请检查填写内容（文件名不能为空，内容可为空）。'
 
 _ERROR_TEXT = {
-    'invalid_root': '工作区目录不可用，请联系维护者。',
-    'workspace_not_initialized': '工作区尚未初始化，请先授权。',
-    'invalid_name': '文件名无效，只能使用当前目录下的 .txt 或 .md 文件名。',
-    'unsupported_type': '只支持 .txt 和 .md 文件。',
-    'not_found': '找不到这个文件，可能已被移动或删除。',
+    'invalid_root': '该路径不是可用的本机文件夹（需为已存在的普通目录，不能是链接、UNC 或设备路径）。',
+    'workspace_not_initialized': '已授权的文件夹当前不可用，请重新授权。',
+    'invalid_name': '路径或文件名无效：不能包含 .. 、反斜杠、冒号、控制字符，也不能以空格或点结尾。',
+    'unsupported_type': '该类型不是可编辑文本；仅支持常见文本和代码文件。',
+    'not_found': '找不到这个文件或目录，可能已被移动或删除。',
     'not_a_file': '该名称不是普通文件。',
-    'unsafe_path': '出于安全考虑，链接文件或特殊路径不能访问。',
-    'file_too_large': '文件超过 64 KiB，无法读取。',
+    'not_a_directory': '该名称不是目录。',
+    'unsafe_path': '出于安全考虑，链接、reparse、隐藏或多硬链文件不能访问。',
+    'file_too_large': '文件超过 64 KiB，无法读取或保存。',
     'content_too_large': '内容超过 64 KiB，请缩短后重试。',
     'invalid_content': '内容必须是文本。',
     'invalid_encoding': '文件不是 UTF-8 文本，无法显示。',
-    'already_exists': '同名文件已存在，请换一个文件名。',
-    'create_failed': '创建文件失败，请稍后重试。',
-    'read_failed': '读取文件失败，请稍后重试。',
+    'binary_content': '文件包含二进制内容（NUL 字节），不是可编辑文本。',
+    'invalid_revision': '缺少读取时的版本信息，请重新读取文件后再保存。',
+    'conflict': '文件在读取后已被外部修改，保存已取消；你的编辑仍保留在下方，请重新读取后再保存。',
+    'already_exists': '同名文件已存在，新建不会覆盖它，请换一个文件名。',
+    'create_failed': '新建文件失败，请稍后重试；未覆盖任何已有文件。',
+    'save_failed': '保存失败，原文件未被替换，你的编辑仍保留在下方。',
+    'read_failed': '读取失败，请稍后重试。',
+}
+
+_PICKER_TEXT = {
+    'picker_cancelled': '已取消选择，当前授权保持不变。',
+    'picker_timeout': '打开文件夹对话框超时（120 秒）。可以手工输入完整路径。',
+    'picker_unavailable': '无法启动系统文件夹对话框，请手工输入完整路径。',
+    'picker_failed': '系统文件夹对话框未能返回路径，请手工输入完整路径。',
 }
 
 
-def _root() -> Path:
-    return Path(settings.WORKSPACE_ROOT)
+def _grant(request) -> dict[str, str] | None:
+    data = request.session.get(SESSION_KEY)
+    if not isinstance(data, dict):
+        return None
+    root = data.get('root')
+    grant_id = data.get('grant_id')
+    if not isinstance(root, str) or not root or not isinstance(grant_id, str) or not grant_id:
+        return None
+    return {'root': root, 'grant_id': grant_id}
 
 
-def _is_granted(request) -> bool:
-    return request.session.get(SESSION_KEY) == str(_root())
-
-
-def _display_root() -> str:
-    root = _root()
-    try:
-        return root.relative_to(settings.PROJECT_ROOT).as_posix()
-    except ValueError:
-        return root.name
+def _workspace(grant: dict[str, str]) -> Workspace:
+    return Workspace(Path(grant['root']))
 
 
 def _message(exc: WorkspaceError) -> str:
     return _ERROR_TEXT.get(exc.code, '操作失败，请稍后重试。')
 
 
+def _parent(directory: str) -> str:
+    return directory.rsplit('/', 1)[0] if '/' in directory else ''
+
+
 def _render(
     request,
     *,
-    granted: bool,
+    grant: dict[str, str] | None,
     error: str = '',
     notice: str = '',
-    files: list[str] | None = None,
-    selected: str = '',
-    content: str = '',
-    form: NewFileForm | None = None,
+    entries: list[dict[str, object]] | None = None,
+    current_dir: str = '',
+    save_form: SaveForm | None = None,
+    new_form: NewFileForm | None = None,
+    grant_path: str = '',
     status: int = 200,
 ):
+    grant_id = grant['grant_id'] if grant else ''
+    if grant and entries is None:
+        entries = _entries(grant, current_dir)
     return render(
         request,
         'workspaces/workspace.html',
         {
-            'granted': granted,
-            'root_display': _display_root(),
-            'files': files or [],
-            'selected': selected,
-            'content': content,
-            'form': form or NewFileForm(),
+            'granted': bool(grant),
+            'root_path': grant['root'] if grant else '',
+            'grant_id': grant_id,
+            'root_display': grant['root'] if grant else '',
+            'entries': entries or [],
+            'current_dir': current_dir,
+            'parent_dir': _parent(current_dir),
+            'save_form': save_form,
+            'new_form': new_form
+            or NewFileForm(initial={'grant_id': grant_id, 'directory': current_dir}),
+            'grant_form': GrantForm(initial={'path': grant_path}),
+            'grant_path': grant_path,
             'error': error,
             'notice': notice,
         },
@@ -93,73 +124,204 @@ def _render(
 @never_cache
 @require_http_methods(['GET', 'POST'])
 def workspace_page(request):
-    granted = _is_granted(request)
+    grant = _grant(request)
 
     if request.method == 'POST':
         action = request.POST.get('action')
         if action == 'grant':
-            try:
-                Workspace(_root()).initialize_demo()
-            except WorkspaceError as exc:
-                return _render(request, granted=granted, error=_message(exc), status=400)
-            request.session[SESSION_KEY] = str(_root())
-            return redirect('workspaces:workspace')
-        if not granted:
-            return _render(request, granted=False, error=NEED_GRANT, status=403)
+            return _grant_folder(request)
+        if action == 'pick':
+            return _pick_folder(request)
+        if not grant:
+            return _render(request, grant=None, error=NEED_GRANT, status=403)
         if action == 'revoke':
             request.session.pop(SESSION_KEY, None)
+            request.session.pop(LEGACY_SESSION_KEY, None)
             return redirect('workspaces:workspace')
+        if action == 'save':
+            return _save_file(request, grant)
         if action == 'create':
-            form = NewFileForm(request.POST)
-            if not form.is_valid():
-                return _failed_create(request, FORM_INVALID, form)
-            try:
-                Workspace(_root()).create_text(form.cleaned_data['name'], form.cleaned_data['content'])
-            except WorkspaceError as exc:
-                return _failed_create(request, _message(exc), form)
-            messages.success(request, f'已创建：{form.cleaned_data["name"]}')
-            return redirect('workspaces:workspace')
-        return _failed_create(request, UNKNOWN_ACTION, None)
+            return _create_file(request, grant)
+        return _render(request, grant=grant, error=UNKNOWN_ACTION, status=400)
 
-    if not granted:
-        return _render(request, granted=False)
+    return _read_page(request, grant)
 
-    files, error = _safe_list()
+
+def _grant_folder(request):
+    form = GrantForm(request.POST)
+    if not form.is_valid():
+        return _render(
+            request, grant=_grant(request), error=FORM_INVALID, grant_path=request.POST.get('path', ''),
+            status=400,
+        )
+    path = form.cleaned_data['path']
+    try:
+        Workspace(Path(path)).validate_root()
+    except WorkspaceError as exc:
+        return _render(
+            request, grant=_grant(request), error=_message(exc), grant_path=path, status=400
+        )
+    except (TypeError, ValueError):
+        return _render(
+            request, grant=_grant(request), error=_message(WorkspaceError('invalid_root')),
+            grant_path=path, status=400,
+        )
+    # Authorization itself never creates folders or welcome files.
+    request.session.pop(LEGACY_SESSION_KEY, None)
+    request.session.cycle_key()
+    request.session[SESSION_KEY] = {'root': str(Path(path)), 'grant_id': uuid.uuid4().hex}
+    return redirect('workspaces:workspace')
+
+
+def _pick_folder(request):
+    grant = _grant(request)
+    try:
+        chosen = pick_folder()
+    except PickerError as exc:
+        text = _PICKER_TEXT.get(exc.code, _PICKER_TEXT['picker_failed'])
+        if exc.code == 'picker_cancelled':
+            return _render(request, grant=grant, notice=text, grant_path='')
+        return _render(request, grant=grant, error=text, grant_path='', status=400)
+    return _render(
+        request,
+        grant=grant,
+        notice=f'已选择路径：{chosen}。确认无误后点击“授权此文件夹”。',
+        grant_path=chosen,
+    )
+
+
+def _read_page(request, grant):
+    if not grant:
+        return _render(request, grant=None)
+
+    workspace = _workspace(grant)
+    current_dir = request.GET.get('dir', '')
     selected = request.GET.get('file', '')
-    content = ''
+    error = ''
     notice = ''
+    entries: list[dict[str, object]] = []
+    save_form = None
+
+    try:
+        entries = workspace.list_directory(current_dir)
+    except WorkspaceError as exc:
+        error = _message(exc)
+        current_dir = ''
+
     if selected:
         try:
-            content = Workspace(_root()).read_text(selected)
-            notice = f'已读取：{selected}'
+            content, revision = workspace.read_document(selected)
         except WorkspaceError as exc:
             error = _message(exc)
-            selected = ''
+        else:
+            save_form = SaveForm(
+                initial={
+                    'grant_id': grant['grant_id'],
+                    'path': selected,
+                    'revision': revision,
+                    'content': content,
+                }
+            )
+            notice = f'已读取：{selected}'
+
     return _render(
         request,
-        granted=True,
+        grant=grant,
         error=error,
         notice=notice,
-        files=files,
-        selected=selected,
-        content=content,
+        entries=entries,
+        current_dir=current_dir,
+        save_form=save_form,
     )
 
 
-def _failed_create(request, error: str, form: NewFileForm | None):
-    files, list_error = _safe_list()
-    return _render(
-        request,
-        granted=True,
-        error=error or list_error,
-        files=files,
-        form=form,
-        status=400,
-    )
-
-
-def _safe_list() -> tuple[list[str], str]:
+def _save_file(request, grant):
+    form = SaveForm(request.POST)
+    directory = request.POST.get('directory', '')
+    if not form.is_valid():
+        return _render(
+            request,
+            grant=grant,
+            error=FORM_INVALID,
+            entries=_entries(grant, directory),
+            current_dir=directory,
+            save_form=form,
+            status=400,
+        )
+    if form.cleaned_data['grant_id'] != grant['grant_id']:
+        return _render(
+            request,
+            grant=grant,
+            error=STALE_GRANT,
+            entries=_entries(grant, directory),
+            current_dir=directory,
+            save_form=form,
+            status=403,
+        )
+    path = form.cleaned_data['path']
     try:
-        return Workspace(_root()).list_files(), ''
+        _workspace(grant).save_text(path, form.cleaned_data['content'], form.cleaned_data['revision'])
     except WorkspaceError as exc:
-        return [], _message(exc)
+        return _render(
+            request,
+            grant=grant,
+            error=_message(exc),
+            entries=_entries(grant, directory),
+            current_dir=directory,
+            save_form=form,
+            status=400,
+        )
+    messages.success(request, f'已保存：{path}')
+    if '/' in path:
+        directory = path.rsplit('/', 1)[0]
+        return redirect(f'/workspace/?dir={quote(directory)}&file={quote(path)}')
+    return redirect(f'/workspace/?file={quote(path)}')
+
+
+def _create_file(request, grant):
+    form = NewFileForm(request.POST)
+    directory = request.POST.get('directory', '')
+    if not form.is_valid():
+        return _render(
+            request,
+            grant=grant,
+            error=FORM_INVALID,
+            entries=_entries(grant, directory),
+            current_dir=directory,
+            new_form=form,
+            status=400,
+        )
+    if form.cleaned_data['grant_id'] != grant['grant_id']:
+        return _render(
+            request,
+            grant=grant,
+            error=STALE_GRANT,
+            entries=_entries(grant, directory),
+            current_dir=directory,
+            new_form=form,
+            status=403,
+        )
+    directory = form.cleaned_data['directory']
+    name = form.cleaned_data['name']
+    path = f'{directory}/{name}' if directory else name
+    try:
+        _workspace(grant).create_text(path, form.cleaned_data['content'])
+    except WorkspaceError as exc:
+        return _render(
+            request,
+            grant=grant,
+            error=_message(exc),
+            entries=_entries(grant, directory),
+            current_dir=directory,
+            new_form=form,
+            status=400,
+        )
+    messages.success(request, f'已创建：{path}')
+    return redirect(f'/workspace/?dir={quote(directory)}' if directory else '/workspace/')
+
+
+def _entries(grant, directory: str) -> list[dict[str, object]]:
+    try:
+        return _workspace(grant).list_directory(directory)
+    except WorkspaceError:
+        return []
