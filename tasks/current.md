@@ -1,6 +1,23 @@
 # 当前任务
 
-## 最新快照（T013：授权与项目关联状态修复已技术验收，待用户体验）
+## 最新快照（T014：开源调研与交互样稿已完成，待视觉反馈）
+- PLAN-r5 / RULES-r8，状态RESEARCH_AND_PREVIEW_DONE_WAITING_USER_REVIEW。已响应GitHub同类学习与开源界面/动效要求；P2仍待整体验收，不自动进入P3，正式前端/桌面选型未锁定。
+- 交付docs/OPEN_SOURCE_RESEARCH.md、25份来源记录docs/OPEN_SOURCE_SOURCES.json；已查看Plane模型、OpenHands Agent Canvas架构/ACP适配、Vibe Kanban执行器。记录Vibe Kanban原公司关闭转社区维护、各许可差异；未安装或运行这些参考应用。
+- docs/previews/workbench.html为隔离样稿：Tabler1.7.0 CSS+Motion14.6.0 JS本地固定文件/许可证/SHA256；可搜索筛选、详情dialog、内存新建、减弱动效、规划入口反馈。显著说明示例数据，不接真实账号/文件/AI，不改backend或用户数据。
+- WorkBuddy T014A只读审计完成；T014B三文件已落盘但通道300秒超时未取得最终简报。Codex核对并停止唯一node18152任务树后接手，没有并发写入或重复派发。补正一次一个授权及已关联但未授权的样稿状态。
+- Chrome11组通过：交互/输入安全、焦点ESC、1440/768/390无横向溢出、系统减弱动效、动画库失败与JS禁用降级、资源哈希。脚本错误0，截图视觉检查通过。首轮受本机Kaspersky浏览器注入影响的网络断言失败保留；复测阻断外部网络并单列已知环境注入域，未改安全软件设置，应用没有外部资源依赖。
+- Node JS语法、diff check通过；backend无diff，沿用T013业务测试基线，本轮没有重跑。详情tasks/acceptance/T014.md与tasks/reports/T014-browser.json。
+- 样稿http://127.0.0.1:8030/workbench.html，专用静态服务exec session89876、PID36572，仅127.0.0.1、目录docs/previews；8000原Django继续运行。侧栏打开返回queued，不视为用户已看到。
+- 下一候选：根据视觉反馈把这套组件接入当前项目列表/详情，然后迁移工作区；新业务功能继续按原阶段逐个规格和验收。未把样稿当作已接真实功能。
+
+## 上一快照（T014：GitHub参考调研与界面样稿）
+- PLAN-r5 / RULES-r8，基线916035d。用户授权学习同类GitHub项目与开源界面/动效；本轮交付可追溯参考、开发方案与隔离的可交互样稿，不视为P2整体认可或P3开工。
+- Codex已查README/架构/许可证：Plane项目管理、OpenHands当前Agent Canvas外部Agent/本地后端边界、Vibe Kanban任务执行审查；后者宣布转社区维护。UI候选Tabler+Motion（MIT）；React Bits有附加条款、Animate.css当前Hippocratic，不能统称MIT。
+- T014A WorkBuddy只读审计已完成且未写文件；现有四套独立shell，建议共享core模板/静态目录，保留表单与授权边界。
+- T014B仅在docs/previews/实现界面样稿及交互，示例数据明确标注；Tabler1.7.0 CSS与Motion14.6.0 JS本地固定副本，不改真实业务/用户数据/最终框架选型。规格tasks/specs/T014-open-source-ui.md。
+- 下一步：WorkBuddy实现样稿；Codex整理调研与组件/功能开发顺序，并浏览器验收。用户仍可继续在8000体验现有P2。
+
+## 上一快照（T013：授权与项目关联状态修复已技术验收，待用户体验）
 - PLAN-r5 / RULES-r8，状态ACCEPTED_BY_CODEX_WAITING_USER_REVIEW；仍为P2验收修复，不推进P3。注册登录此前已获用户确认。
 - 用户截图：独立工作区D:\已授权，但“开发”项目尚未关联。已补当前授权目录/归属、项目关联位置与访问状态、列表显式POST“关联到此项目”；关联后从项目进入工作区。独立入口解释项目授权范围，不自动借用权限。
 - projects/workspaces共用grants.context_grant（用户、project_id、目录均匹配）；GET不自动关联，关联继续owner/CSRF与grant_id轮换；未改模型/迁移/依赖/文件边界，未改用户账号或“开发”项目数据。

@@ -1,0 +1,156 @@
+{
+  "checked_date": "2026-10-23",
+  "status": "Source inspection only; no reference application installed or run",
+  "sources": [
+    {
+      "repository": "BloopAI/vibe-kanban",
+      "url": "https://github.com/BloopAI/vibe-kanban/blob/main/README.md",
+      "blob_sha": "32c6ed4ccd4649a9c78058a694dbbc1297c421a8",
+      "use": "README and current scope"
+    },
+    {
+      "repository": "BloopAI/vibe-kanban",
+      "url": "https://github.com/BloopAI/vibe-kanban/blob/main/LICENSE",
+      "blob_sha": "261eeb9e9f8b2b4b0d119366dda99c6fd7d35c64",
+      "use": "License where available"
+    },
+    {
+      "repository": "makeplane/plane",
+      "url": "https://github.com/makeplane/plane/blob/preview/README.md",
+      "blob_sha": "74688cd92c4b14a9e34ad26075fa752a755b21c2",
+      "use": "README and current scope"
+    },
+    {
+      "repository": "OpenHands/OpenHands",
+      "url": "https://github.com/OpenHands/OpenHands/blob/main/README.md",
+      "blob_sha": "548013df64b5ebe91694b6edde799de6d1400100",
+      "use": "README and current scope"
+    },
+    {
+      "repository": "OpenHands/OpenHands",
+      "url": "https://github.com/OpenHands/OpenHands/blob/main/LICENSE",
+      "blob_sha": "f6f60f52368bcc96f82fbe59ec65049c2c3af9db",
+      "use": "License where available"
+    },
+    {
+      "repository": "tabler/tabler",
+      "url": "https://github.com/tabler/tabler/blob/dev/README.md",
+      "blob_sha": "4d973d0826f9db89c120d1e77bb6094b259b8761",
+      "use": "README and current scope"
+    },
+    {
+      "repository": "tabler/tabler",
+      "url": "https://github.com/tabler/tabler/blob/dev/LICENSE",
+      "blob_sha": "aa69649cde83c2d6517ec2498a9c10f5bb3bf54c",
+      "use": "License where available"
+    },
+    {
+      "repository": "animate-css/animate.css",
+      "url": "https://github.com/animate-css/animate.css/blob/main/README.md",
+      "blob_sha": "c7ae5e378fed2c1981cd155f986e6428e1c3049f",
+      "use": "README and current scope"
+    },
+    {
+      "repository": "animate-css/animate.css",
+      "url": "https://github.com/animate-css/animate.css/blob/main/LICENSE",
+      "blob_sha": "4debcfffb97abd7e10f0917ab5c04dae24be8f94",
+      "use": "License where available"
+    },
+    {
+      "repository": "DavidHDev/react-bits",
+      "url": "https://github.com/DavidHDev/react-bits/blob/main/README.md",
+      "blob_sha": "c19bf4af45a7217c0d1f77bcd183fb64f9594d64",
+      "use": "README and current scope"
+    },
+    {
+      "repository": "motiondivision/motion",
+      "url": "https://github.com/motiondivision/motion/blob/main/README.md",
+      "blob_sha": "135269342568a3c3507accd14881c9bde2a7c090",
+      "use": "Vanilla JavaScript support"
+    },
+    {
+      "repository": "motiondivision/motion",
+      "url": "https://github.com/motiondivision/motion/blob/main/LICENSE.md",
+      "blob_sha": "81110442c72270dd317667cc52181522647401f2",
+      "use": "MIT core license"
+    },
+    {
+      "repository": "DavidHDev/react-bits",
+      "url": "https://github.com/DavidHDev/react-bits/blob/main/LICENSE.md",
+      "blob_sha": "4069ce9d0ef1a712c93d6ce48ade5d5667e0f5ee",
+      "use": "Current additional license terms"
+    },
+    {
+      "repository": "OpenHands/OpenHands",
+      "url": "https://github.com/OpenHands/OpenHands/blob/main/docs/architecture.md",
+      "blob_sha": "f7c391fdc21395119028c29308c552afe389e1a9",
+      "use": "Runtime and UI boundaries"
+    },
+    {
+      "repository": "OpenHands/OpenHands",
+      "url": "https://github.com/OpenHands/OpenHands/blob/main/docs/ACP_AGENTS.md",
+      "blob_sha": "f4b9eb668def540cf958c9ec3e0812859cfe540b",
+      "use": "ACP agent adapter integration"
+    },
+    {
+      "repository": "makeplane/plane",
+      "url": "https://github.com/makeplane/plane/blob/preview/COPYRIGHT.txt",
+      "blob_sha": "2a6fd91ff30475efac0cb44a8c9f6ec233577e05",
+      "use": "AGPL identifier"
+    },
+    {
+      "repository": "formkit/auto-animate",
+      "url": "https://github.com/formkit/auto-animate/blob/master/LICENSE",
+      "blob_sha": "4e9fc4c33ae2e07c9acb89b8c44708168daf0161",
+      "use": "MIT license"
+    },
+    {
+      "repository": "formkit/auto-animate",
+      "url": "https://github.com/formkit/auto-animate/blob/master/README.md",
+      "blob_sha": "b92e17e0ad086588b4fa461ec8149fe7593cdaed",
+      "use": "Optional DOM transition candidate"
+    },
+    {
+      "repository": "tabler/tabler",
+      "url": "https://github.com/tabler/tabler/blob/dev/package.json",
+      "blob_sha": "52ad355a16067c521c000d5f4b4feda3f83f526a",
+      "use": "Monorepo layout"
+    },
+    {
+      "repository": "motiondivision/motion",
+      "url": "https://github.com/motiondivision/motion/blob/main/packages/motion/package.json",
+      "blob_sha": "0070c0ebbdb66464250b3e6b21471f7bdd18337c",
+      "use": "Motion package source version"
+    },
+    {
+      "repository": "tabler/tabler",
+      "url": "https://github.com/tabler/tabler/blob/dev/core/package.json",
+      "blob_sha": "ce21006076b6ff10fe7739bae40e671b8fc49075",
+      "use": "Core package source version"
+    },
+    {
+      "repository": "makeplane/plane",
+      "url": "https://github.com/makeplane/plane/blob/preview/apps/api/plane/db/models/project.py",
+      "blob_sha": "5d9d2264dcd04a609fd55de8bb486774e1e76296",
+      "use": "Project model"
+    },
+    {
+      "repository": "makeplane/plane",
+      "url": "https://github.com/makeplane/plane/blob/preview/apps/api/plane/db/models/issue.py",
+      "blob_sha": "fe23ee681dc644f0498fa12f6265d81e946443d1",
+      "use": "Issue model"
+    },
+    {
+      "repository": "BloopAI/vibe-kanban",
+      "url": "https://github.com/BloopAI/vibe-kanban/blob/main/crates/executors/src/executors/mod.rs",
+      "blob_sha": "1126d09179970ed558edc5c6539fb649ce8951d2",
+      "use": "Executor adapter contract"
+    },
+    {
+      "repository": "OpenHands/OpenHands",
+      "url": "https://github.com/OpenHands/OpenHands/blob/main/src/constants/acp-providers.ts",
+      "blob_sha": "524f3e04820575cfec071c871f7e4836bfdd8a50",
+      "use": "Provider registry and adapter checks"
+    }
+  ]
+}

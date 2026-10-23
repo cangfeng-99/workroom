@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>工作台界面样稿 · AgentWorkspace</title>
+<link rel="stylesheet" href="assets/vendor/tabler-1.7.0.min.css">
+<link rel="stylesheet" href="assets/workbench.css">
+</head>
+<body>
+<div class="demo-ribbon" role="note"><span class="ribbon-dot" aria-hidden="true"></span><strong>界面样稿</strong><span class="ribbon-sep">·</span>示例数据，不连接账号、文件或 AI</div>
+<div class="app-shell">
+  <aside class="sidebar" aria-label="工作台导航">
+    <div class="brand"><span class="brand-mark" aria-hidden="true">W</span><div><strong>Workbench</strong><small>协作工作台样稿</small></div></div>
+    <nav class="side-nav" aria-label="主导航">
+      <span class="nav-label">工作台</span>
+      <a class="nav-link is-active" href="#projects" aria-current="page">项目<span class="nav-count" id="nav-count">4</span></a>
+      <button class="nav-link" type="button" data-plan="文件工作区" data-kind="outside">文件工作区<span class="nav-badge">未接入</span></button>
+      <button class="nav-link" type="button" data-plan="任务">任务<span class="nav-badge">规划中</span></button>
+      <button class="nav-link" type="button" data-plan="成员">成员<span class="nav-badge">规划中</span></button>
+      <span class="nav-label nav-label-gap">连接</span>
+      <button class="nav-link" type="button" data-plan="AI 连接">AI 连接<span class="nav-badge">规划中</span></button>
+    </nav>
+    <div class="side-foot"><span class="dot" aria-hidden="true"></span>示例环境 · 刷新即恢复</div>
+  </aside>
+  <div class="main">
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">工作台 / 项目</p>
+        <h1>项目</h1>
+        <p class="page-sub">集中查看项目、文件夹授权与协作上下文。</p>
+      </div>
+      <div class="topbar-actions">
+        <button class="motion-toggle" id="motion-toggle" type="button" role="switch" aria-checked="false" aria-label="减弱动效">减弱动效<span class="motion-state" id="motion-state">关</span><span class="switch-track" aria-hidden="true"><span class="switch-thumb"></span></span></button>
+        <button class="btn btn-primary" id="open-new" type="button">新建示例项目</button>
+      </div>
+    </header>
+    <main class="content" id="projects">
+      <div class="memory-note" role="note"><strong>内存示例</strong><span>新建与筛选仅在本标签页生效，刷新后恢复；不写入数据库，也不访问本机文件。</span></div>
+      <div class="workspace-grid">
+        <section class="panel" aria-labelledby="list-title">
+          <div class="panel-head"><div><h2 id="list-title">示例项目</h2><p>以项目组织文件夹授权与协作上下文。</p></div><span class="count" id="project-count" aria-live="polite">4 个示例项目</span></div>
+          <div class="toolbar">
+            <label class="search-box" for="project-search">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4 4"/></svg>
+              <input class="form-control" id="project-search" type="search" placeholder="搜索项目名称或说明" autocomplete="off" aria-label="搜索项目名称或说明">
+            </label>
+            <label class="sr-only" for="status-filter">按授权状态筛选</label>
+            <select class="form-select filter-select" id="status-filter">
+              <option value="all">全部授权状态</option><option value="authorized">已授权</option><option value="pending">尚未授权</option>
+            </select>
+            <button class="btn btn-ghost" id="clear-filters" type="button">重置</button>
+          </div>
+          <div class="project-list" id="project-list">
+            <article class="project-item" data-name="产品官网改版" data-status="authorized" data-folder="D:\Work\atlas-site" data-updated="今天 09:40" data-members="林舟、周宁" data-summary="围绕官网改版整理页面结构、文案与移动端验收记录。" data-tasks="更新首页信息架构|确认移动端导航|整理发布检查清单">
+              <div class="project-main"><span class="project-icon tone-blue" aria-hidden="true">产</span>
+                <div class="project-info">
+                  <div class="title-line"><h3>产品官网改版</h3><span class="badge auth-badge is-ok">已授权，可读写</span></div>
+                  <p>围绕官网改版整理页面结构、文案与移动端验收记录。</p>
+                  <div class="meta"><span><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M4 7a2 2 0 0 1 2-2h3l2 2h7a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z"/></svg>D:\Work\atlas-site</span><span>更新于 今天 09:40</span></div>
+                </div>
+              </div>
+              <div class="project-side"><span>关联位置：项目工作区</span><button class="btn btn-sm btn-outline-secondary" type="button" data-action="detail">查看详情</button></div>
+            </article>
+            <article class="project-item" data-name="工作台设计系统" data-status="pending" data-folder="D:\Design\workbench-ui" data-updated="昨天 18:12" data-members="林舟" data-summary="汇总组件规范、交互状态与前端样稿评审意见。" data-tasks="整理组件清单|评审导航密度">
+              <div class="project-main"><span class="project-icon tone-plum" aria-hidden="true">设</span>
+                <div class="project-info">
+                  <div class="title-line"><h3>工作台设计系统</h3><span class="badge auth-badge is-warn">尚未授权</span></div>
+                  <p>汇总组件规范、交互状态与前端样稿评审意见。</p>
+                  <div class="meta"><span><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M4 7a2 2 0 0 1 2-2h3l2 2h7a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z"/></svg>D:\Design\workbench-ui</span><span>更新于 昨天 18:12</span></div>
+                </div>
+              </div>
+              <div class="project-side"><span>关联位置：项目工作区</span><button class="btn btn-sm btn-outline-secondary" type="button" data-action="detail">查看详情</button></div>
+            </article>
+            <article class="project-item" data-name="AI 周报助手" data-status="pending" data-folder="未关联示例文件夹" data-updated="10月21日" data-members="陈默" data-summary="规划中的内部工具，先收集周报模板与字段需求。" data-tasks="收集周报模板">
+              <div class="project-main"><span class="project-icon tone-sand" aria-hidden="true">周</span>
+                <div class="project-info">
+                  <div class="title-line"><h3>AI 周报助手</h3><span class="badge auth-badge is-warn">尚未授权</span></div>
+                  <p>规划中的内部工具，先收集周报模板与字段需求。</p>
+                  <div class="meta"><span><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M4 7a2 2 0 0 1 2-2h3l2 2h7a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z"/></svg>未关联示例文件夹</span><span>更新于 10月21日</span></div>
+                </div>
+              </div>
+              <div class="project-side"><span>关联位置：未关联</span><button class="btn btn-sm btn-outline-secondary" type="button" data-action="detail">查看详情</button></div>
+            </article>
+            <article class="project-item" data-name="客户反馈归档" data-status="pending" data-folder="D:\Ops\feedback" data-updated="10月20日" data-members="周宁" data-summary="整理试用反馈与后续跟进记录，按周归档。" data-tasks="">
+              <div class="project-main"><span class="project-icon tone-green" aria-hidden="true">客</span>
+                <div class="project-info">
+                  <div class="title-line"><h3>客户反馈归档</h3><span class="badge auth-badge is-warn">尚未授权</span></div>
+                  <p>整理试用反馈与后续跟进记录，按周归档。</p>
+                  <div class="meta"><span><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M4 7a2 2 0 0 1 2-2h3l2 2h7a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z"/></svg>D:\Ops\feedback</span><span>更新于 10月20日</span></div>
+                </div>
+              </div>
+              <div class="project-side"><span>关联位置：项目工作区</span><button class="btn btn-sm btn-outline-secondary" type="button" data-action="detail">查看详情</button></div>
+            </article>
+          </div>
+          <div class="empty-state" id="empty-state" hidden><strong>没有匹配的示例项目</strong><span>试试其他关键词，或清除授权状态筛选。</span><br><button class="btn btn-sm btn-outline-secondary" id="empty-reset" type="button">清除筛选</button></div>
+        </section>
+        <aside class="rail">
+          <section class="panel rail-card" aria-labelledby="status-title">
+            <h2 id="status-title">工作台状态</h2>
+            <dl class="status-list">
+              <div><dt>当前账号</dt><dd>示例访客 <span class="muted">未连接</span></dd></div>
+              <div><dt>文件夹授权</dt><dd><span id="rail-auth">1 / 4</span> 个示例项目</dd></div>
+              <div><dt>AI 连接</dt><dd><span class="badge auth-badge is-warn">规划中</span></dd></div>
+            </dl>
+            <p class="rail-hint">示例沿用当前规则：同一会话仅一个项目持有当前文件授权。</p>
+          </section>
+          <section class="panel rail-card" aria-labelledby="plan-title">
+            <h2 id="plan-title">下一批能力</h2>
+            <ul class="plan-list"><li>任务看板 <span class="nav-badge">规划中</span></li><li>AI 执行器 <span class="nav-badge">规划中</span></li><li>成员与邀请 <span class="nav-badge">规划中</span></li></ul>
+            <p class="rail-hint">样稿不包含真实任务、AI 执行或成员邀请；入口只做状态展示。</p>
+          </section>
+        </aside>
+      </div>
+      <p class="footnote">本地资源：Tabler 1.7.0（MIT）与 Motion 14.6.0（MIT）· 无远程字体、图片或遥测</p>
+    </main>
+  </div>
+</div>
+<dialog class="demo-dialog detail-dialog" id="detail-dialog" aria-labelledby="detail-title">
+  <div class="dialog-panel">
+    <div class="dialog-head">
+      <div><p class="dialog-kicker">示例项目 · 不连接真实文件</p><h2 id="detail-title">项目详情</h2></div>
+      <button class="icon-btn" type="button" data-close-detail aria-label="关闭项目详情"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+    </div>
+    <div class="dialog-body">
+      <p class="detail-summary" id="detail-summary"></p>
+      <dl class="detail-grid">
+        <div><dt>关联文件夹</dt><dd id="detail-folder"></dd></div>
+        <div><dt>授权状态</dt><dd><span class="badge auth-badge" id="detail-status"></span></dd></div>
+        <div><dt>关联位置</dt><dd id="detail-location"></dd></div>
+        <div><dt>最近更新</dt><dd id="detail-updated"></dd></div>
+        <div><dt>项目成员</dt><dd id="detail-members"></dd></div>
+        <div><dt>示例标识</dt><dd>仅本页内存</dd></div>
+      </dl>
+      <p class="auth-note" id="detail-auth-note"></p>
+      <section class="detail-section" aria-labelledby="task-title">
+        <h3 id="task-title">项目内任务 <span class="badge auth-badge is-warn">规划中</span></h3>
+        <ul class="task-list" id="detail-tasks"></ul>
+      </section>
+    </div>
+    <div class="dialog-foot">
+      <button class="btn btn-outline-secondary" type="button" data-close-detail>关闭</button>
+      <button class="btn btn-primary" type="button" disabled title="正式版接入项目工作区后可用">打开工作区（规划中）</button>
+    </div>
+  </div>
+</dialog>
+<dialog class="demo-dialog" id="new-dialog" aria-labelledby="new-title">
+  <form class="dialog-panel" id="new-form" method="dialog" novalidate>
+    <div class="dialog-head">
+      <div><p class="dialog-kicker">内存示例 · 不入库</p><h2 id="new-title">新建示例项目</h2></div>
+      <button class="icon-btn" type="button" data-close-new aria-label="关闭新建项目"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+    </div>
+    <div class="dialog-body">
+      <div class="field"><label for="new-name">项目名称</label><input class="form-control" id="new-name" maxlength="40" placeholder="例如：官网内容改版" autocomplete="off" required aria-describedby="new-name-error"><p class="field-error" id="new-name-error" role="alert" hidden></p></div>
+      <div class="field"><label for="new-desc">一句话说明 <span class="optional">可选</span></label><textarea class="form-control" id="new-desc" maxlength="120" rows="2" placeholder="这个项目要推进什么？"></textarea></div>
+      <div class="field"><label for="new-folder">文件夹与授权状态</label>
+        <select class="form-select" id="new-folder"><option value="pending">暂不关联，保持未授权</option><option value="authorized">关联示例目录并切换当前授权（仅演示状态）</option></select>
+      </div>
+      <p class="form-note">仅在本页内存中新增卡片；刷新即恢复四个初始示例，不写入数据库、账号或本机文件。</p>
+    </div>
+    <div class="dialog-foot"><button class="btn btn-outline-secondary" type="button" data-close-new>取消</button><button class="btn btn-primary" type="submit">添加到内存</button></div>
+  </form>
+</dialog>
+<div class="toast-region" id="toast-region" aria-live="polite" aria-atomic="false"></div>
+<script src="assets/vendor/motion-14.6.0.js"></script>
+<script src="assets/workbench.js"></script>
+</body>
+</html>
