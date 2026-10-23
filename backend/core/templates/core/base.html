@@ -24,8 +24,6 @@
         <a class="nav-link{% if request.resolver_match.app_name == 'projects' %} is-active{% endif %}" href="{% url 'projects:list' %}"{% if request.resolver_match.app_name == 'projects' %} aria-current="page"{% endif %}>我的项目</a>
         <a class="nav-link{% if request.resolver_match.app_name == 'workspaces' %} is-active{% endif %}" href="{% url 'workspaces:workspace' %}"{% if request.resolver_match.app_name == 'workspaces' %} aria-current="page"{% endif %}>文件工作区</a>
         <span class="nav-label nav-label-gap">即将开放</span>
-        <span class="nav-link is-disabled" aria-disabled="true">任务<span class="nav-badge">规划中</span></span>
-        <span class="nav-link is-disabled" aria-disabled="true">成员<span class="nav-badge">规划中</span></span>
         <span class="nav-link is-disabled" aria-disabled="true">AI 连接<span class="nav-badge">规划中</span></span>
       </nav>
       <div class="side-bottom">

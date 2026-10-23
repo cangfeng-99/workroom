@@ -6,7 +6,7 @@
   {% if project.description %}<p class="page-sub">{{ project.description }}</p>{% endif %}
 {% endblock %}
 {% block content %}
-  <p class="back-link"><a href="{% url 'projects:board' project.pk %}">← 返回协作画布</a></p>
+  <p class="back-link"><a href="{% url 'projects:hub' project.pk %}">← 返回项目空间</a> <span class="meta-sep">·</span> <a href="{% url 'projects:board' project.pk %}">协作画布</a></p>
   <section class="card">
     <div class="card-head">
       <div>

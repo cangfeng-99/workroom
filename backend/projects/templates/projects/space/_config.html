@@ -1,0 +1,147 @@
+<aside class="hub-side" id="project-config" aria-label="项目配置">
+  <section class="hub-side-block">
+    <div class="hub-side-head">
+      <h2>项目配置</h2>
+      {% if is_owner %}<span class="hub-side-role">所有者可管理</span>{% else %}<span class="hub-side-role">成员只读</span>{% endif %}
+    </div>
+    <dl class="hub-facts">
+      <div><dt>所有者</dt><dd>{{ project.owner.username }}</dd></div>
+      <div><dt>成员</dt><dd>{{ members|length }}</dd></div>
+      <div><dt>任务</dt><dd>{{ all_task_count }}</dd></div>
+      <div><dt>更新</dt><dd>{{ project.updated_at|date:"Y-m-d H:i" }}</dd></div>
+    </dl>
+  </section>
+
+  <section class="hub-side-block" aria-labelledby="config-instructions">
+    <div class="hub-side-head">
+      <h2 id="config-instructions">项目指令</h2>
+      <span class="hub-side-role">{% if is_owner %}可编辑{% else %}只读{% endif %}</span>
+    </div>
+    {% if is_owner %}
+      <form class="hub-instructions" method="post" action="{% url 'projects:instructions_update' project.pk %}">
+        {% csrf_token %}
+        {{ instructions_form.non_field_errors }}
+        <label class="sr-only" for="{{ instructions_form.instructions.id_for_label }}">项目指令</label>
+        {{ instructions_form.instructions }}
+        {{ instructions_form.instructions.errors }}
+        <div class="hub-inline-foot">
+          <span class="hint">最多 6000 字；保存后成员可见。</span>
+          <button type="submit" class="secondary">保存指令</button>
+        </div>
+      </form>
+    {% elif project.instructions %}
+      <div class="hub-readonly">{{ project.instructions|linebreaksbr }}</div>
+    {% else %}
+      <p class="muted">所有者还没有填写项目指令。</p>
+    {% endif %}
+  </section>
+
+  <section class="hub-side-block" aria-labelledby="config-team">
+    <div class="hub-side-head">
+      <h2 id="config-team">团队</h2>
+      <span class="count">{{ members|length }}</span>
+    </div>
+    <ul class="hub-team-list">
+      {% for member in members %}
+        <li class="hub-team-item">
+          <span class="hub-member-avatar{% if member.kind == 'ai' %} ai{% endif %}" aria-hidden="true">{{ member.name|slice:":1"|upper }}</span>
+          <div class="hub-team-body">
+            <p class="hub-team-name">
+              {{ member.name }}
+              {% if member.user_id == project.owner_id %}<span class="hub-tag owner">所有者</span>{% endif %}
+            </p>
+            <p class="hub-team-meta">
+              <span>{{ member.role|default:'未填写分工' }}</span>
+              {% if member.kind == 'ai' %}
+                <span class="hub-unconnected">AI · 未连接</span>
+              {% else %}
+                <span class="hub-human">真人成员</span>
+              {% endif %}
+            </p>
+          </div>
+        </li>
+      {% empty %}
+        <li class="muted">还没有成员。</li>
+      {% endfor %}
+    </ul>
+    {% if is_owner %}
+      <div class="hub-side-actions"><a class="button secondary" href="{% url 'projects:board' project.pk %}#panel-team">管理团队</a><a class="button ghost" href="{% url 'projects:invitation_list' project.pk %}">邀请成员</a></div>
+      <p class="hint">生成一次性邀请链接；受邀者只获得分工角色，不会获得文件访问。</p>
+    {% else %}
+      <p class="hint">成员角色与邀请由项目所有者管理。</p>
+    {% endif %}
+  </section>
+
+  <section class="hub-side-block" aria-labelledby="config-workspace">
+    <div class="hub-side-head">
+      <h2 id="config-workspace">工作空间</h2>
+      {% if is_owner %}
+        {% if authorized %}<span class="status on">已授权</span>{% else %}<span class="status off">未授权</span>{% endif %}
+      {% endif %}
+    </div>
+    {% if is_owner %}
+      {% if project.workspace_path %}
+        <p class="hub-side-path"><span class="dir">{{ project.workspace_path }}</span></p>
+        <p class="hint">{% if authorized %}本次登录已授权该项目文件夹，可在资产页查看元数据。{% else %}位置已记录，但本次登录尚未授权；现在不会读取目录。{% endif %}</p>
+        <div class="hub-side-actions">
+          <a class="button secondary" href="{% url 'workspaces:workspace' %}?project={{ project.pk }}">管理文件授权</a>
+          <a class="button ghost" href="{% url 'projects:open' project.pk %}">打开文件工作区</a>
+        </div>
+      {% else %}
+        <p class="muted">尚未关联本机文件夹。</p>
+        <a class="button secondary hub-block-button" href="{% url 'projects:board' project.pk %}#board-workspace">选择工作空间</a>
+      {% endif %}
+    {% else %}
+      <p class="muted">文件工作区仅项目所有者可访问；成员不会看到路径、授权记录或资产。</p>
+      <button type="button" class="secondary hub-block-button" disabled>打开文件工作区（仅所有者）</button>
+    {% endif %}
+  </section>
+
+  <section class="hub-side-block" aria-labelledby="config-extensions">
+    <div class="hub-side-head">
+      <h2 id="config-extensions">扩展能力</h2>
+      <span class="hub-side-role">未接入</span>
+    </div>
+    <ul class="hub-disabled-list">
+      <li><span>连接器</span><span class="hub-pill off">未接入</span><button type="button" class="hub-mini-button" disabled>配置</button></li>
+      <li><span>技能</span><span class="hub-pill off">未接入</span><button type="button" class="hub-mini-button" disabled>配置</button></li>
+      <li><span>定时执行</span><span class="hub-pill off">未接入</span><button type="button" class="hub-mini-button" disabled>配置</button></li>
+    </ul>
+    <p class="hint">连接器、技能和定时执行将在后续接入。</p>
+  </section>
+
+  <section class="hub-side-block" aria-labelledby="config-ai">
+    <div class="hub-side-head">
+      <h2 id="config-ai">AI 角色</h2>
+      <span class="count">{{ ai_members|length }}</span>
+    </div>
+    {% if ai_members %}
+      <ul class="hub-ai-list">
+        {% for member in ai_members %}
+          <li>
+            <span class="hub-ai-dot" aria-hidden="true"></span>
+            <span class="hub-ai-name">{{ member.name }}</span>
+            <span class="hub-unconnected">未连接</span>
+          </li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <p class="muted">还没有 AI 角色；可稍后在协作画布中添加一个分工条目。</p>
+    {% endif %}
+    <button type="button" class="secondary hub-block-button" disabled>连接模型（未接入）</button>
+    <p class="hint">AI 只是分工角色，不连接模型或工具，不会自动回复或执行任务。</p>
+  </section>
+
+  {% if visible_projects %}
+    <section class="hub-side-block">
+      <details class="hub-switcher">
+        <summary>切换项目（{{ visible_projects|length }}）</summary>
+        <ul>
+          {% for item in visible_projects %}
+            <li><a href="{% url 'projects:hub' item.pk %}">{{ item.name }}</a></li>
+          {% endfor %}
+        </ul>
+      </details>
+    </section>
+  {% endif %}
+</aside>

@@ -550,13 +550,13 @@ class BoardContextTests(BoardTestBase):
 
 
 class ProjectCreationTests(BoardTestBase):
-    def test_new_project_creates_owner_member_and_redirects_to_board(self) -> None:
+    def test_new_project_creates_owner_member_and_redirects_to_hub(self) -> None:
         response = self.client.post('/projects/new/', {'name': '新项目', 'description': '说明'})
 
         project = Project.objects.get(name='新项目')
         member = ProjectMember.objects.get(project=project)
         self.assertEqual(response.status_code, 302)
-        self.assertEqual(response['Location'], f'/projects/{project.pk}/board/')
+        self.assertEqual(response['Location'], f'/projects/{project.pk}/space/')
         self.assertEqual(member.kind, ProjectMember.Kind.HUMAN)
         self.assertEqual(member.user, self.alice)
         self.assertEqual(member.name, 'alice')

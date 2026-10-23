@@ -1,6 +1,21 @@
 # 当前任务
 
-## 最新快照（T017：实现与专项检查完成，界面按用户新要求继续）
+## 最新快照（T018及T017：技术验收通过，交用户体验）
+- PLAN-r9 / RULES-r12；状态ACCEPTED_BY_CODEX_WAITING_USER_REVIEW。T017提交9a6548a；T018已完成真实配置与项目空间，规格tasks/specs/T018-project-space.md，完整证据tasks/acceptance/T018.md。
+- 新建集中资料/指令/工作空间显式授权/初始真人与AI角色（可加减，最多10），原子保存后进入hub。项目卡片与模板入口；动态留言、计划表/看板/原任务树、任务筛选、本机资产；右侧指令/团队管理/邀请/授权。成员不获本机路径和文件权限，AI/连接器/技能/定时执行未接入。
+- WB主要实现并回填日志；通道超时后Codex核对唯一node9720任务完成记录并停止任务树、确认退出后接管，无并发写入。Codex修复空成员行KeyError（新增RED→GREEN），补初始成员增删/模板入口、产品文案与768px辅助标签溢出修复。
+- 0004已在SQLite备份后应用，原账号/项目/成员/任务/邀请原列值逐项不变。原admin/开发项目及用户文件保留。QA仅专用临时账号/目录，结束精确清理账号与任务。
+- 最终pytest279 passed/1 skipped/30 subtests，Ruff/check（0 silenced）/迁移一致性/Node语法/diff通过。Chrome完整7组PASS，320/768/1440与无JS/减弱动效、邀请双账号和文件边界通过；脚本异常和本地静态失败0。失败记录与修复见acceptance，外部Kaspersky注入阻断并单列，未知来源仍拒绝。
+- 入口http://127.0.0.1:8000/projects/，现有项目卡片进入/projects/<pk>/space/；8000沿用exec75829，最后核对worker24396（autoreload会变）。旧画布与文件区继续使用。AI调用、外部工具执行/回报、远程发布/安装包未实现，不自动跨阶段，等用户体验反馈。
+
+## 上一快照（T018：项目配置与项目空间已实现，待Codex复核）
+- PLAN-r9 / RULES-r12；基线9a6548a，T017已结束保存，本轮未重启T017。WorkBuddy唯一写入，Codex期间只读。规格tasks/specs/T018-project-space.md；用户明确创建时集中配置、四页签、项目卡片与右栏；资产只显示已授权本机文件，不上传。
+- A后端：Project.instructions、ProjectMessage、TaskNode.priority/labels与0004增量迁移（未应用）；项目创建集中表单支持显式工作空间授权、初始成员formset最多10、旧link_grant兼容、错误原子回滚且不改当前grant；TaskForm旧POST缺省/保留/清空语义；Workspace.list_assets仅stat、目录优先100项、任何普通文件类型元数据，复用既有路径/链接/硬链/隐藏校验。
+- B界面：/projects/<pk>/space/ 浅薄荷项目空间，动态/计划/任务/资产四页签+右侧项目配置；真实留言、表格/看板/任务筛选、原画布新建与编辑入口、本机资产元数据、owner指令编辑、团队/邀请入口；连接器/技能/定时执行禁用为未接入，AI未连接；项目入口改为真实卡片+搜索，新建项目分区表单与指令模板卡。
+- 验证：pytest backend/projects backend/workspaces 257 passed/1 skipped/27 subtests；全量278 passed/1 skipped/30 subtests；Ruff、Django check、makemigrations --check、Node --check space.js通过。未起服务、未迁移真实DB、未commit/联网/装依赖/派agent；未做真实Chrome与320/768/1440实测，留Codex备份后应用0004并浏览器验收。
+- 下一步：Codex只读复核；备份后应用0004，真实Chrome核对新建/四页签/邀请双账号/成员文件边界/320-768-1440；未接AI、未远程发布如实保留。
+
+## 上一快照（T017：实现与专项检查完成，界面按用户新要求继续）
 - PLAN-r8 / RULES-r11；WorkBuddy7528任务已核对停止，当前Codex唯一写入。邀请专项51 passed/15 subtests passed；Ruff/check/迁移一致性通过，0003备份后应用，原记录不变。详见tasks/acceptance/T017.md。
 - 用户提供项目卡片、动态/计划/任务/资产与右侧配置截图，并明确资产先显示已授权本机文件、不上传。下一任务T018按该方向修订新建配置和项目界面；邀请完整浏览器验收随T018合并进行，未记为已完成技术/用户验收。
 

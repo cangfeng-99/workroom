@@ -32,6 +32,7 @@
   </nav>
 
   <div class="rail-tools">
+    <a href="{% url 'projects:hub' project.pk %}">项目空间</a>
     <a href="{% url 'projects:list' %}">所有项目</a>
     {% if is_owner %}
       {% if project.workspace_path %}
@@ -96,7 +97,7 @@
         <input type="search" id="board-search" placeholder="搜索任务…" autocomplete="off" spellcheck="false">
       </label>
       <span class="canvas-count" data-count aria-live="polite">{{ tasks|length }} 个任务</span>
-      {% if is_owner and tasks %}
+      {% if is_owner %}
         <button type="button" class="button primary" data-open-dialog="task-dialog">新建任务</button>
       {% endif %}
       <div class="canvas-tools">
@@ -270,6 +271,22 @@
             </div>
             <div class="field-row">
               <div class="field">
+                <label for="edit-priority">优先级</label>
+                <select id="edit-priority" name="priority">
+                  {% for value, label in priority_choices %}
+                    <option value="{{ value }}"{% if edit_form.priority.value == value %} selected{% endif %}>{{ label }}</option>
+                  {% endfor %}
+                </select>
+                {{ edit_form.priority.errors }}
+              </div>
+              <div class="field">
+                <label for="edit-labels">标签</label>
+                <input id="edit-labels" name="labels" type="text" maxlength="200" value="{{ edit_form.labels.value|default:'' }}" placeholder="例如：前端、联调">
+                {{ edit_form.labels.errors }}
+              </div>
+            </div>
+            <div class="field-row">
+              <div class="field">
                 <label for="edit-start">开始日期</label>
                 <input id="edit-start" name="start_date" type="date" required value="{% if edit_form.start_date.value %}{{ edit_form.start_date.value|stringformat:"s" }}{% endif %}">
                 {{ edit_form.start_date.errors }}
@@ -313,7 +330,7 @@
           <div><dt>任务</dt><dd>{{ tasks|length }}</dd></div>
           <div><dt>团队</dt><dd>{{ members|length }}</dd></div>
         </dl>
-        {% if is_owner and tasks %}
+        {% if is_owner %}
           <button type="button" class="button primary" data-open-dialog="task-dialog">新建任务</button>
         {% endif %}
       {% endif %}
@@ -401,7 +418,7 @@
 </div>
 
 {% if is_owner %}
-  <dialog id="task-dialog" class="board-dialog" aria-labelledby="task-dialog-title"{% if task_form.errors %} data-open-on-load{% endif %}>
+  <dialog id="task-dialog" class="board-dialog" aria-labelledby="task-dialog-title"{% if task_form.errors or open_task_dialog %} data-open-on-load{% endif %}>
     <div class="dialog-bar">
       <h2 id="task-dialog-title">新建任务</h2>
       <button type="button" class="dialog-close" data-close-dialog aria-label="关闭">×</button>
@@ -448,6 +465,22 @@
             {% endfor %}
           </select>
           {{ task_form.status.errors }}
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label for="new-task-priority">优先级</label>
+          <select id="new-task-priority" name="priority">
+            {% for value, label in priority_choices %}
+              <option value="{{ value }}"{% if task_form.priority.value == value or not task_form.priority.value and value == 'normal' %} selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+          </select>
+          {{ task_form.priority.errors }}
+        </div>
+        <div class="field">
+          <label for="new-task-labels">标签</label>
+          <input id="new-task-labels" name="labels" type="text" maxlength="200" value="{{ task_form.labels.value|default:'' }}" placeholder="例如：前端、联调">
+          {{ task_form.labels.errors }}
         </div>
       </div>
       <div class="field-row">

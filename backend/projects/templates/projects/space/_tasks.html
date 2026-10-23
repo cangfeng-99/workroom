@@ -1,0 +1,48 @@
+<section class="hub-panel" aria-labelledby="tasks-title">
+  <div class="hub-panel-head">
+    <div>
+      <h2 id="tasks-title">任务</h2>
+      <p>按负责人、日期与状态跟进项目任务。</p>
+    </div>
+    {% if is_owner %}
+      <a class="button primary" href="{% url 'projects:board' project.pk %}?new=task">新建任务</a>
+    {% endif %}
+  </div>
+
+  <form class="hub-filter" method="get" action="">
+    <input type="hidden" name="tab" value="tasks">
+    <label class="sr-only" for="task-search">搜索任务标题或内容</label>
+    <input id="task-search" type="search" name="q" value="{{ query }}" placeholder="搜索任务标题或内容" autocomplete="off">
+    <label class="sr-only" for="task-status">按状态筛选</label>
+    <select id="task-status" name="status">
+      <option value="">全部状态</option>
+      {% for value, label in status_choices %}
+        <option value="{{ value }}"{% if status_filter == value %} selected{% endif %}>{{ label }}</option>
+      {% endfor %}
+    </select>
+    <button type="submit" class="primary">筛选</button>
+    <a class="button ghost" href="?tab=tasks">重置</a>
+  </form>
+
+  {% if tasks %}
+    <p class="hub-result-count" aria-live="polite">显示 {{ tasks|length }} / {{ all_task_count }} 个任务</p>
+    {% include 'projects/space/_task_table.html' %}
+    <p class="hint">点击任务标题查看详情；成员可更新分配给自己的任务状态。</p>
+  {% elif query or status_filter %}
+    <div class="hub-empty">
+      <span class="hub-empty-mark" aria-hidden="true">⌕</span>
+      <h3>没有匹配的任务</h3>
+      <p>试试其他关键词，或清除状态筛选。</p>
+      <a class="button secondary" href="?tab=tasks">清除筛选</a>
+    </div>
+  {% else %}
+    <div class="hub-empty">
+      <span class="hub-empty-mark" aria-hidden="true">◷</span>
+      <h3>还没有任务</h3>
+      <p>任务创建后会同时出现在计划、任务和画布中。</p>
+      {% if is_owner %}
+        <a class="button primary" href="{% url 'projects:board' project.pk %}?new=task">新建任务</a>
+      {% endif %}
+    </div>
+  {% endif %}
+</section>

@@ -1,6 +1,6 @@
 from django.urls import path
 
-from projects import board_views, invite_views, views
+from projects import board_views, hub_views, invite_views, views
 
 app_name = 'projects'
 
@@ -8,6 +8,13 @@ urlpatterns = [
     path('', views.project_list, name='list'),
     path('new/', views.project_new, name='new'),
     path('join/<str:token>/', invite_views.invitation_join, name='invitation_join'),
+    path('<int:pk>/space/', hub_views.hub, name='hub'),
+    path('<int:pk>/space/messages/', hub_views.message_add, name='message_add'),
+    path(
+        '<int:pk>/space/instructions/',
+        hub_views.instructions_update,
+        name='instructions_update',
+    ),
     path('<int:pk>/', views.project_detail, name='detail'),
     path('<int:pk>/workspace/', views.project_link_workspace, name='link_workspace'),
     path('<int:pk>/open/', views.project_open, name='open'),

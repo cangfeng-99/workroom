@@ -22,6 +22,7 @@ import hashlib
 import os
 import stat
 import tempfile
+from datetime import datetime
 from pathlib import Path
 
 MAX_FILE_BYTES = 64 * 1024
@@ -78,6 +79,14 @@ _RESERVED_NAMES = frozenset(
     | {f'lpt{index}' for index in range(1, 10)}
 )
 _INVALID_NAME_CHARS = frozenset('<>:"|?*')
+
+
+def _modified(info: os.stat_result) -> datetime | None:
+    """Best-effort modification time for display; never raises."""
+    try:
+        return datetime.fromtimestamp(info.st_mtime)
+    except (OSError, OverflowError, ValueError):
+        return None
 
 
 class WorkspaceError(Exception):
@@ -189,6 +198,64 @@ class Workspace:
             for entry in self.list_directory(directory)
             if entry['kind'] == 'file'
         ]
+
+    def list_assets(self, directory: str = '') -> list[dict[str, object]]:
+        """List folders and files as metadata only, at most 100 entries.
+
+        Unlike :meth:`list_directory`, any regular file type is reported (PDF,
+        images, archives, large files) because assets are display-only. The
+        service only calls ``lstat``; it never opens or reads file content.
+        Symlinks/reparse points, hard-linked files, hidden entries, invalid
+        names and non-regular files are skipped. Directories come first.
+        """
+        folder = self._resolve_directory(directory)
+        directories: list[dict[str, object]] = []
+        files: list[dict[str, object]] = []
+        try:
+            with os.scandir(folder) as scan:
+                for entry in scan:
+                    try:
+                        self._check_segment(entry.name)
+                    except WorkspaceError:
+                        continue
+                    try:
+                        info = os.lstat(entry.path)
+                    except OSError:
+                        continue
+                    relative = f'{directory}/{entry.name}' if directory else entry.name
+                    if stat.S_ISDIR(info.st_mode):
+                        if self._is_link_or_reparse(info) or self._is_hidden(info):
+                            continue
+                        directories.append(
+                            {
+                                'name': entry.name,
+                                'path': relative,
+                                'kind': 'dir',
+                                'size': None,
+                                'suffix': '',
+                                'modified': _modified(info),
+                            }
+                        )
+                    elif stat.S_ISREG(info.st_mode):
+                        try:
+                            self._check_file_stat(info)
+                        except WorkspaceError:
+                            continue
+                        files.append(
+                            {
+                                'name': entry.name,
+                                'path': relative,
+                                'kind': 'file',
+                                'size': info.st_size,
+                                'suffix': Path(entry.name).suffix.lower(),
+                                'modified': _modified(info),
+                            }
+                        )
+        except OSError as exc:
+            raise WorkspaceError('read_failed', 'cannot list directory') from exc
+        directories.sort(key=lambda item: str(item['name']).casefold())
+        files.sort(key=lambda item: str(item['name']).casefold())
+        return (directories + files)[:MAX_DIRECTORY_ENTRIES]
 
     # -- reading -------------------------------------------------------
 

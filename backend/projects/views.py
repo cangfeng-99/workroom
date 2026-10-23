@@ -13,14 +13,15 @@ from pathlib import Path
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db import transaction
+from django.db.models import Count
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.cache import never_cache
 from django.views.decorators.http import require_http_methods, require_POST
 from workspaces.grants import context_grant, get_grant, same_path, set_grant
 from workspaces.services import Workspace, WorkspaceError
 
-from projects.forms import ProjectForm
 from projects.models import Project, ProjectMember
+from projects.setup_forms import InitialMemberFormSet, ProjectSetupForm
 
 NO_GRANT = '当前未授权任何文件夹。请先到工作区选择并授权一个文件夹，再回来关联。'
 INVALID_ROOT = '该文件夹当前不可用（需为已存在的普通目录，不能是链接、UNC 或设备路径）。'
@@ -65,7 +66,14 @@ def _detail_context(request, project, grant, error: str = '') -> dict:
 @never_cache
 @login_required
 def project_list(request):
-    projects = list(Project.objects.filter(owner=request.user))
+    projects = list(
+        Project.objects.filter(owner=request.user)
+        .annotate(
+            member_count=Count('members', distinct=True),
+            task_count=Count('tasks', distinct=True),
+        )
+        .order_by('-updated_at', '-pk')
+    )
     grant = get_grant(request)
     grant_project = _grant_project(request, grant)
     grant_usable = context_grant(request, grant_project) is not None
@@ -105,13 +113,49 @@ def project_list(request):
 @login_required
 @require_http_methods(['GET', 'POST'])
 def project_new(request):
-    grant_root = _grant_root(request)
+    grant = get_grant(request)
+    grant_root = grant['root'] if grant else ''
     if request.method == 'POST':
-        form = ProjectForm(request.POST)
+        form = ProjectSetupForm(request.POST)
+        # Older pages posted no formset at all; only a real management form
+        # turns the initial-team rows on.
+        has_members = 'members-TOTAL_FORMS' in request.POST
+        formset = (
+            InitialMemberFormSet(request.POST, prefix='members')
+            if has_members
+            else InitialMemberFormSet(prefix='members')
+        )
         link = request.POST.get('link_grant') == 'on'
+        form_valid = form.is_valid()
+        formset_valid = formset.is_valid() if has_members else True
         error = ''
-        if form.is_valid():
-            if link:
+        members: list[dict[str, object]] = []
+        if form_valid and formset_valid and has_members:
+            seen: set[int] = set()
+            for member_form in formset.forms:
+                data = member_form.cleaned_data
+                if not data or data.get('skip'):
+                    continue
+                user = data.get('user')
+                if user is not None:
+                    if user.pk == request.user.pk:
+                        error = '项目所有者会自动加入，无需重复添加。'
+                        break
+                    if user.pk in seen:
+                        error = f'账号 {user.username} 重复添加。'
+                        break
+                    seen.add(user.pk)
+                members.append({
+                    'kind': data['kind'],
+                    'name': data['name'],
+                    'role': data['role'],
+                    'user': user,
+                })
+        if form_valid and formset_valid and not error:
+            authorize = form.cleaned_data['authorize_workspace']
+            setup_path = form.cleaned_data['setup_path']
+            workspace_path = setup_path if authorize else ''
+            if not authorize and link:
                 if not grant_root:
                     error = NO_GRANT
                 else:
@@ -119,13 +163,16 @@ def project_new(request):
                         Workspace(Path(grant_root)).validate_root()
                     except (WorkspaceError, TypeError, ValueError):
                         error = INVALID_ROOT
+                    else:
+                        workspace_path = str(Path(grant_root))
             if not error:
-                # The owner becomes the first human member in the same
-                # transaction, so a project never exists without its owner row.
+                # The project, its owner row and every initial member succeed or
+                # roll back together; the session grant is only changed after
+                # that transaction has committed.
                 with transaction.atomic():
                     project = form.save(commit=False)
                     project.owner = request.user
-                    project.workspace_path = str(Path(grant_root)) if link and grant_root else ''
+                    project.workspace_path = workspace_path
                     project.save()
                     ProjectMember.objects.create(
                         project=project,
@@ -134,19 +181,37 @@ def project_new(request):
                         role='项目负责人',
                         user=request.user,
                     )
+                    for item in members:
+                        ProjectMember.objects.create(project=project, **item)
+                if authorize:
+                    set_grant(
+                        request, workspace_path, uuid.uuid4().hex,
+                        project_id=str(project.pk),
+                    )
                 messages.success(request, f'已创建项目：{project.name}')
-                return redirect('projects:board', pk=project.pk)
+                return redirect('projects:hub', pk=project.pk)
         return render(
             request,
             'projects/new.html',
-            {'form': form, 'grant_root': grant_root, 'error': error,
-             'linked': link},
+            {
+                'form': form,
+                'member_formset': formset,
+                'grant_root': grant_root,
+                'error': error,
+                'linked': link,
+            },
             status=400,
         )
     return render(
         request,
         'projects/new.html',
-        {'form': ProjectForm(), 'grant_root': grant_root, 'error': '', 'linked': True},
+        {
+            'form': ProjectSetupForm(),
+            'member_formset': InitialMemberFormSet(prefix='members'),
+            'grant_root': grant_root,
+            'error': '',
+            'linked': False,
+        },
     )
 
 

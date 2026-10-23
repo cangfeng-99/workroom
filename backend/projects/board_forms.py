@@ -67,6 +67,7 @@ class TaskForm(forms.ModelForm):
         model = TaskNode
         fields = (
             'title', 'description', 'assignee', 'status', 'start_date', 'end_date', 'parent',
+            'priority', 'labels',
         )
 
     def __init__(self, *args, project, include_parent: bool = True, **kwargs) -> None:
@@ -81,6 +82,12 @@ class TaskForm(forms.ModelForm):
         self.fields['title'].label = '任务标题'
         self.fields['description'].label = '任务内容'
         self.fields['status'].label = '状态'
+        self.fields['priority'].label = '优先级'
+        self.fields['priority'].required = False
+        self.fields['labels'].label = '标签'
+        self.fields['labels'].widget.attrs.update(
+            {'maxlength': 200, 'placeholder': '例如：前端、联调（可选）'}
+        )
         self.fields['start_date'].label = '开始日期'
         self.fields['end_date'].label = '结束日期'
         for name in ('start_date', 'end_date'):
@@ -97,6 +104,15 @@ class TaskForm(forms.ModelForm):
 
     def clean(self):
         data = super().clean()
+        # Older pages posted neither field. Creating falls back to the model
+        # default; editing keeps the stored value unless the field is present,
+        # so an explicit empty ``labels`` still clears it.
+        if not data.get('priority'):
+            data['priority'] = (
+                self.instance.priority if self.instance.pk else TaskNode.Priority.NORMAL
+            )
+        if 'labels' not in self.data:
+            data['labels'] = self.instance.labels if self.instance.pk else ''
         assignee = data.get('assignee')
         if assignee is not None and assignee.project_id != self.project.pk:
             raise forms.ValidationError('负责人必须属于同一个项目。')

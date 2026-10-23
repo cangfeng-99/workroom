@@ -22,6 +22,7 @@ class Project(models.Model):
     )
     name = models.CharField(max_length=120)
     description = models.TextField(max_length=2000, blank=True)
+    instructions = models.TextField(max_length=6000, blank=True)
     workspace_path = models.CharField(max_length=1024, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -31,6 +32,24 @@ class Project(models.Model):
 
     def __str__(self) -> str:
         return self.name
+
+
+class ProjectMessage(models.Model):
+    """A real human note in the project activity feed (never an AI reply)."""
+
+    project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='messages')
+    author = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, related_name='project_messages',
+        null=True, blank=True,
+    )
+    content = models.TextField(max_length=4000)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ('-created_at', '-pk')
+
+    def __str__(self) -> str:
+        return f'{self.project_id}:{self.pk}'
 
 
 class ProjectMember(models.Model):
@@ -122,6 +141,12 @@ class TaskNode(models.Model):
         REVIEW = 'review', '待验收'
         DONE = 'done', '已完成'
 
+    class Priority(models.TextChoices):
+        LOW = 'low', '低'
+        NORMAL = 'normal', '普通'
+        HIGH = 'high', '高'
+        URGENT = 'urgent', '紧急'
+
     project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='tasks')
     parent = models.ForeignKey(
         'self', on_delete=models.PROTECT, related_name='children', null=True, blank=True
@@ -133,6 +158,10 @@ class TaskNode(models.Model):
         null=True, blank=True,
     )
     status = models.CharField(max_length=16, choices=Status.choices, default=Status.TODO)
+    priority = models.CharField(
+        max_length=8, choices=Priority.choices, default=Priority.NORMAL
+    )
+    labels = models.CharField(max_length=200, blank=True)
     start_date = models.DateField()
     end_date = models.DateField()
     created_at = models.DateTimeField(auto_now_add=True)

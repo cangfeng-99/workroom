@@ -1,0 +1,46 @@
+<section class="hub-panel activity-panel" aria-labelledby="activity-title">
+  <div class="hub-panel-head">
+    <div>
+      <h2 id="activity-title">动态</h2>
+      <p>记录团队进展、讨论与决定。</p>
+    </div>
+    <span class="count">{{ message_count }} 条</span>
+  </div>
+
+  {% if project_messages %}
+    <ol class="activity-feed">
+      {% for note in project_messages %}
+        <li class="activity-item">
+          <span class="activity-avatar" aria-hidden="true">{% if note.author %}{{ note.author.username|slice:":1"|upper }}{% else %}?{% endif %}</span>
+          <div class="activity-body">
+            <p class="activity-meta">
+              <strong>{% if note.author %}{{ note.author.username }}{% else %}已注销成员{% endif %}</strong>
+              <time datetime="{{ note.created_at|date:'c' }}">{{ note.created_at|date:"Y-m-d H:i" }}</time>
+            </p>
+            <div class="activity-text">{{ note.content|linebreaksbr }}</div>
+          </div>
+        </li>
+      {% endfor %}
+    </ol>
+  {% else %}
+    <div class="hub-empty">
+      <span class="hub-empty-mark" aria-hidden="true">✳</span>
+      <h3>还没有动态</h3>
+      <p>发布第一条留言，记录进展、决定或需要团队知道的事情。</p>
+    </div>
+  {% endif %}
+
+  <form class="activity-form" method="post" action="{% url 'projects:message_add' project.pk %}">
+    {% csrf_token %}
+    {{ message_form.non_field_errors }}
+    <div class="field">
+      <label for="{{ message_form.content.id_for_label }}">发布动态</label>
+      {{ message_form.content }}
+      {{ message_form.content.errors }}
+    </div>
+    <div class="hub-form-foot">
+      <p class="hint">项目成员可见 · AI 尚未连接</p>
+      <button type="submit" class="primary">发布</button>
+    </div>
+  </form>
+</section>

@@ -102,6 +102,7 @@ def _board(
     editing_task: TaskNode | None = None,
     edit_form=None,
     notice: str = '',
+    open_task_dialog: bool = False,
 ):
     is_owner = project.owner_id == request.user.pk
     member = _find_member(request, project)
@@ -125,9 +126,11 @@ def _board(
             'editing_task': editing_task,
             'edit_form': edit_form,
             'status_choices': TaskNode.Status.choices,
+            'priority_choices': TaskNode.Priority.choices,
             'canvas_data': _canvas_data(project),
             'error': error,
             'notice': notice,
+            'open_task_dialog': open_task_dialog,
         },
         status=status,
     )
@@ -176,6 +179,7 @@ def board(request, pk: int):
         project,
         editing_task=editing_task,
         edit_form=edit_form,
+        open_task_dialog=request.GET.get('new') == 'task',
     )
 
 
