@@ -1,6 +1,6 @@
 from django.urls import path
 
-from projects import views
+from projects import board_views, views
 
 app_name = 'projects'
 
@@ -10,4 +10,14 @@ urlpatterns = [
     path('<int:pk>/', views.project_detail, name='detail'),
     path('<int:pk>/workspace/', views.project_link_workspace, name='link_workspace'),
     path('<int:pk>/open/', views.project_open, name='open'),
+    path('<int:pk>/board/', board_views.board, name='board'),
+    path('<int:pk>/board/members/', board_views.member_add, name='member_add'),
+    path(
+        '<int:pk>/board/members/<int:member_pk>/',
+        board_views.member_update,
+        name='member_update',
+    ),
+    path('<int:pk>/board/tasks/', board_views.task_add, name='task_add'),
+    path('<int:pk>/board/tasks/<int:task_pk>/', board_views.task_update, name='task_update'),
+    path('<int:pk>/board/workspace/', board_views.board_workspace, name='board_workspace'),
 ]

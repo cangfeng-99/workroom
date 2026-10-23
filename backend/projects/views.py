@@ -12,6 +12,7 @@ from pathlib import Path
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.db import transaction
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.cache import never_cache
 from django.views.decorators.http import require_http_methods, require_POST
@@ -19,7 +20,7 @@ from workspaces.grants import context_grant, get_grant, same_path, set_grant
 from workspaces.services import Workspace, WorkspaceError
 
 from projects.forms import ProjectForm
-from projects.models import Project
+from projects.models import Project, ProjectMember
 
 NO_GRANT = '当前未授权任何文件夹。请先到工作区选择并授权一个文件夹，再回来关联。'
 INVALID_ROOT = '该文件夹当前不可用（需为已存在的普通目录，不能是链接、UNC 或设备路径）。'
@@ -111,12 +112,22 @@ def project_new(request):
                     except (WorkspaceError, TypeError, ValueError):
                         error = INVALID_ROOT
             if not error:
-                project = form.save(commit=False)
-                project.owner = request.user
-                project.workspace_path = str(Path(grant_root)) if link and grant_root else ''
-                project.save()
+                # The owner becomes the first human member in the same
+                # transaction, so a project never exists without its owner row.
+                with transaction.atomic():
+                    project = form.save(commit=False)
+                    project.owner = request.user
+                    project.workspace_path = str(Path(grant_root)) if link and grant_root else ''
+                    project.save()
+                    ProjectMember.objects.create(
+                        project=project,
+                        kind=ProjectMember.Kind.HUMAN,
+                        name=request.user.username,
+                        role='项目负责人',
+                        user=request.user,
+                    )
                 messages.success(request, f'已创建项目：{project.name}')
-                return redirect('projects:detail', pk=project.pk)
+                return redirect('projects:board', pk=project.pk)
         return render(
             request,
             'projects/new.html',
