@@ -44,3 +44,5 @@ class HomePageContractTests(SimpleTestCase):
         self.assertIn('Django服务已启动', html)
         self.assertIn('href="/api/health/"', html)
         self.assertIn('href="/workspace/"', html)
+        self.assertIn('href="/projects/"', html)
+        self.assertIn('no-store', response['Cache-Control'])

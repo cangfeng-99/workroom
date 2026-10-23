@@ -1,6 +1,19 @@
 # 当前任务
 
-## 最新快照（T012A已复核，T012B项目闭环派发）
+## 最新快照（T012：P2账号与项目技术验收通过，待用户体验）
+- PLAN-r5 / RULES-r8，状态ACCEPTED_BY_CODEX_WAITING_USER_REVIEW；用户授权的A+B完成，P1原流程保留并纳入登录门禁；不自动进入P3团队/任务/AI。
+- 入口http://127.0.0.1:8000/projects/，首次到/accounts/signup/注册，注册/登录成功进本人项目列表；POST退出。无预置用户/管理员，真实账号由用户自行注册。
+- 功能：本人项目创建/列表/详情、关联当前明确授权的本机目录、打开项目上下文工作区、子目录读写/新建/撤销。模型保存路径，重新登录项目与路径保留，但必须再次授权文件访问。
+- 安全：owner过滤+user_id/project_id grant；登录/退出清旧授权，项目/目录改变拒绝旧grant，保存/新建/撤销与导航保留项目。匿名文件页跳登录，目录API401，CSRF/no-store/自动转义与P1文件边界保留；health公开只读。
+- WorkBuddy T012A完成回报且已提交c598188；B通道300秒超时，Codex核对并停止唯一node11920任务树后接管，没有并发写入/重复派发；B未取得的最终回报不作为验证证据。
+- Codex补正：异常项目query返回404且无文件访问；补跨项目旧页POST/改关联路径旧grant回归与普通注册权限断言；旧测试统一改从grants模块引用常量，未删断言；纯force_login权限fixture去除无关密码哈希，真实注册登录哈希测试保留。生成迁移加ClassVar注解，无lint抑制。
+- 数据：原SQLite库已备份到.tools/backups，projects.0001_initial仅创建Project表，实际增量迁移OK，无重置；最终makemigrations检查无差异。
+- 最终验证：pytest156 passed/1 skipped（既有file symlink权限跳过），ruff backend/tools、Django check、diff check通过。移除owner过滤的内存变异被回归捕获，实际源码未改。
+- Chrome实测注册登录、项目创建/关联/原位置保存、跨账号404、项目切换拒绝、POST退出、服务重启后账号/两个项目仍在、重登录需再授权、拒绝外站next及撤销退出均通过；页面脚本错误0，390px无横向溢出。测试账号和其项目已精确清理，未留演示凭据。
+- 当前服务：Run-Backend.cmd exec session6238，仅127.0.0.1:8000，原19518已Ctrl+C结束；不要重复启动。验收证据tasks/acceptance/T012.md与tasks/reports/T012-browser.json/截图；两个QA助手失败已更正后全流程通过。
+- 下一步：用户按验收说明注册自己的账号、创建项目并关联文件夹体验；用户认可后再准备团队与邀请的下一规格。当前仍本机开发版，数据库/桌面最终选型、远程文件访问、AI执行器尚未实现。
+
+## 上一快照（T012A已复核，T012B项目闭环派发）
 - PLAN-r5 / RULES-r8。T012A ACCEPTED_BY_CODEX：注册/登录/POST退出与账号归属授权代码已独立审阅，134 passed/1 skipped，ruff/check通过。浏览器完整验收留到B集成后一次完成。
 - T012B APPROVED：WorkBuddy新增本人Project与增量迁移、创建/列表/详情、关联当前授权文件夹、project上下文工作区。规格T012-accounts-projects.md的B段；只一个写入者，不派额外agent。
 - 仅B范围及必要accounts测试默认登录重定向联动；当前服务继续运行，B不应用真实迁移/不重启。完成后Codex审阅迁移、应用本机开发库并做真实Chrome完整闭环。

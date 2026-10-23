@@ -54,6 +54,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'core',
     'accounts',
+    'projects',
     'workspaces',
 ]
 
@@ -122,9 +123,9 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = 'zh-hans'
 
-# Authentication: native Django login/signup; Phase A lands on the home page.
+# Authentication: native Django login/signup; signed-in users land on their projects.
 LOGIN_URL = '/accounts/login/'
-LOGIN_REDIRECT_URL = '/'
+LOGIN_REDIRECT_URL = '/projects/'
 LOGOUT_REDIRECT_URL = '/'
 
 TIME_ZONE = 'Asia/Shanghai'

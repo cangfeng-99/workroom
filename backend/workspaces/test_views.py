@@ -9,7 +9,7 @@ from pathlib import Path
 from django.contrib.auth import get_user_model
 from django.test import Client, TestCase
 
-from workspaces import views as workspace_views
+from workspaces import grants as workspace_grants
 
 
 class WorkspacePageTests(TestCase):
@@ -19,7 +19,7 @@ class WorkspacePageTests(TestCase):
         self.base = Path(self.tmp.name)
         self.root = self.base / 'project'
         self.root.mkdir()
-        self.user = get_user_model().objects.create_user('alice', password='Str0ng-Pass!234')
+        self.user = get_user_model().objects.create_user('alice')
         self.client = Client()
         self.client.force_login(self.user)
 
@@ -30,7 +30,7 @@ class WorkspacePageTests(TestCase):
         self.assertEqual(response.status_code, 302, response.content.decode('utf-8')[:400])
 
     def grant_id(self) -> str:
-        return self.client.session[workspace_views.SESSION_KEY]['grant_id']
+        return self.client.session[workspace_grants.SESSION_KEY]['grant_id']
 
     def snapshot(self) -> set[str]:
         return {str(item.relative_to(self.base)) for item in self.base.rglob('*')}
@@ -76,13 +76,13 @@ class WorkspacePageTests(TestCase):
         for path in (str(missing), 'relative/folder', '\\\\server\\share'):
             response = self.client.post('/workspace/', {'action': 'grant', 'path': path})
             self.assertEqual(response.status_code, 400, path)
-            self.assertNotIn(workspace_views.SESSION_KEY, self.client.session)
+            self.assertNotIn(workspace_grants.SESSION_KEY, self.client.session)
 
         self.assertFalse(missing.exists())
 
     def test_legacy_demo_session_key_does_not_grant(self) -> None:
         session = self.client.session
-        session[workspace_views.LEGACY_SESSION_KEY] = str(self.root)
+        session[workspace_grants.LEGACY_SESSION_KEY] = str(self.root)
         session.save()
 
         body = self.client.get('/workspace/').content.decode('utf-8')
@@ -357,7 +357,7 @@ class WorkspacePageTests(TestCase):
         response = csrf_client.post('/workspace/', {'action': 'grant', 'path': str(self.root)})
 
         self.assertEqual(response.status_code, 403)
-        self.assertNotIn(workspace_views.SESSION_KEY, csrf_client.session)
+        self.assertNotIn(workspace_grants.SESSION_KEY, csrf_client.session)
 
     def test_unknown_action_is_rejected(self) -> None:
         self.grant()
@@ -380,20 +380,20 @@ class WorkspacePageTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertIn('页面内', body)
         self.assertIn('id="grant-path"', body)
-        self.assertNotIn(workspace_views.SESSION_KEY, self.client.session)
+        self.assertNotIn(workspace_grants.SESSION_KEY, self.client.session)
         self.assertEqual(self.snapshot(), before)
 
     def test_legacy_pick_action_keeps_existing_grant_and_listing(self) -> None:
         (self.root / 'keep.md').write_text('keep', encoding='utf-8')
         self.grant()
-        grant = dict(self.client.session[workspace_views.SESSION_KEY])
+        grant = dict(self.client.session[workspace_grants.SESSION_KEY])
 
         response = self.client.post('/workspace/', {'action': 'pick'})
 
         self.assertEqual(response.status_code, 200)
         self.assertIn('页面内', response.content.decode('utf-8'))
         self.assertIn('keep.md', response.content.decode('utf-8'))
-        self.assertEqual(self.client.session[workspace_views.SESSION_KEY], grant)
+        self.assertEqual(self.client.session[workspace_grants.SESSION_KEY], grant)
 
     def test_page_dialog_is_accessible_and_keyboard_closeable(self) -> None:
         body = self.client.get('/workspace/').content.decode('utf-8')
@@ -487,7 +487,7 @@ class FolderBrowserEndpointTests(TestCase):
         (self.root / 'src').mkdir()
         (self.root / '文档').mkdir()
         (self.root / 'note.txt').write_text('DO-NOT-READ', encoding='utf-8')
-        self.user = get_user_model().objects.create_user('alice', password='Str0ng-Pass!234')
+        self.user = get_user_model().objects.create_user('alice')
         self.client = Client()
         self.client.force_login(self.user)
 
@@ -520,13 +520,13 @@ class FolderBrowserEndpointTests(TestCase):
         self.assertEqual(data['parent'], str(self.base))
         self.assertEqual([item['name'] for item in data['directories']], ['src', '文档'])
         self.assertFalse(data['truncated'])
-        self.assertNotIn(workspace_views.SESSION_KEY, self.client.session)
+        self.assertNotIn(workspace_grants.SESSION_KEY, self.client.session)
         self.assertEqual(self.snapshot(), before)
         self.assertEqual((self.root / 'note.txt').read_text(encoding='utf-8'), 'DO-NOT-READ')
 
     def test_bad_paths_return_json_400_and_keep_existing_grant(self) -> None:
         self.client.post('/workspace/', {'action': 'grant', 'path': str(self.root)})
-        grant = dict(self.client.session[workspace_views.SESSION_KEY])
+        grant = dict(self.client.session[workspace_grants.SESSION_KEY])
         file_path = str(self.root / 'note.txt')
 
         for path, code in (
@@ -540,7 +540,7 @@ class FolderBrowserEndpointTests(TestCase):
             self.assertEqual(response.status_code, 400, path)
             self.assertEqual(response.json(), {'error': code}, path)
 
-        self.assertEqual(self.client.session[workspace_views.SESSION_KEY], grant)
+        self.assertEqual(self.client.session[workspace_grants.SESSION_KEY], grant)
 
     def test_get_is_rejected(self) -> None:
         self.assertEqual(self.client.get('/workspace/folders/').status_code, 405)

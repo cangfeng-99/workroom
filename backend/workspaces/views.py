@@ -5,17 +5,23 @@ The authorized root lives in the server-side session together with a random
 must repeat the current ``grant_id`` so a page rendered before a root switch
 cannot write into the newly authorized folder. ``GET`` never writes and never
 opens the native dialog. The legacy demo key is never read.
+
+A ``?project=<pk>`` context is resolved strictly (owned project only) before
+any folder is touched. In that context only a grant bound to the same project
+and rooted at the project's remembered folder is used; an independent page
+only accepts a grant whose ``project_id`` is empty.
 """
 
 from __future__ import annotations
 
+import os
 import uuid
 from pathlib import Path
-from urllib.parse import quote
+from urllib.parse import urlencode
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.http import JsonResponse
+from django.http import Http404, JsonResponse
 from django.shortcuts import redirect, render
 from django.views.decorators.cache import never_cache
 from django.views.decorators.http import require_http_methods, require_POST
@@ -34,6 +40,8 @@ UNKNOWN_ACTION = '无法识别的操作，请刷新页面后重试。'
 NEED_GRANT = '请先授权一个本机文件夹，然后再操作文件。'
 STALE_GRANT = '授权已变更或页面已过期，本次操作未写入任何文件。请刷新页面后重试。'
 FORM_INVALID = '请检查填写内容（文件名不能为空，内容可为空）。'
+PROJECT_NO_PATH = '该项目尚未关联文件夹，请先返回项目详情关联一个已授权的文件夹。'
+PROJECT_PATH_MISMATCH = '项目工作区只能授权项目已关联的文件夹；请返回项目详情更换关联。'
 
 _ERROR_TEXT = {
     'invalid_root': '该路径不是可用的本机文件夹（需为已存在的普通目录，不能是链接、UNC 或设备路径）。',
@@ -75,6 +83,54 @@ def _parent(directory: str) -> str:
     return directory.rsplit('/', 1)[0] if '/' in directory else ''
 
 
+def _same_path(left: str, right: str) -> bool:
+    return os.path.normcase(os.path.normpath(left)) == os.path.normcase(os.path.normpath(right))
+
+
+def _resolve_project(request):
+    """Resolve ``?project=`` strictly, before any folder or grant access."""
+    raw = request.GET.get('project')
+    if raw is None:
+        return None
+    if not raw.isascii() or not raw.isdecimal() or len(raw) > 19 or int(raw) <= 0:
+        raise Http404('invalid project')
+    from projects.models import Project
+
+    project = Project.objects.filter(pk=int(raw), owner=request.user).first()
+    if project is None:
+        raise Http404('unknown project')
+    request.workspace_project = project
+    return project
+
+
+def _context_grant(request, project):
+    """Return only the grant that belongs to this exact context."""
+    grant = get_grant(request)
+    if not grant:
+        return None
+    if project is not None:
+        if grant['project_id'] != str(project.pk):
+            return None
+        if not project.workspace_path or not _same_path(grant['root'], project.workspace_path):
+            return None
+        return grant
+    if grant['project_id']:
+        return None
+    return grant
+
+
+def _workspace_url(project, *, directory: str | None = None, file: str | None = None) -> str:
+    params: list[tuple[str, str]] = []
+    if project is not None:
+        params.append(('project', str(project.pk)))
+    if directory is not None:
+        params.append(('dir', directory))
+    if file is not None:
+        params.append(('file', file))
+    query = urlencode(params)
+    return '/workspace/' + (f'?{query}' if query else '')
+
+
 def _render(
     request,
     *,
@@ -86,11 +142,14 @@ def _render(
     save_form: SaveForm | None = None,
     new_form: NewFileForm | None = None,
     grant_path: str = '',
+    project=None,
     status: int = 200,
 ):
     grant_id = grant['grant_id'] if grant else ''
     if grant and entries is None:
         entries = _entries(grant, current_dir)
+    if not grant_path and project is not None:
+        grant_path = project.workspace_path
     return render(
         request,
         'workspaces/workspace.html',
@@ -107,6 +166,7 @@ def _render(
             or NewFileForm(initial={'grant_id': grant_id, 'directory': current_dir}),
             'grant_form': GrantForm(initial={'path': grant_path}),
             'grant_path': grant_path,
+            'project': project,
             'error': error,
             'notice': notice,
         },
@@ -118,54 +178,67 @@ def _render(
 @login_required
 @require_http_methods(['GET', 'POST'])
 def workspace_page(request):
-    grant = get_grant(request)
+    project = _resolve_project(request)
+    grant = _context_grant(request, project)
 
     if request.method == 'POST':
         action = request.POST.get('action')
         if action == 'grant':
-            return _grant_folder(request)
+            return _grant_folder(request, project)
         if action == 'pick':
             # Legacy form target kept only for stale pages: answer immediately,
             # never start an OS dialog, never grant or change the session.
-            return _render(request, grant=grant, notice=_PICK_NOTICE)
+            return _render(request, grant=grant, notice=_PICK_NOTICE, project=project)
         if not grant:
-            return _render(request, grant=None, error=NEED_GRANT, status=403)
+            return _render(request, grant=None, error=NEED_GRANT, project=project, status=403)
         if action == 'revoke':
             clear_grant(request)
-            return redirect('workspaces:workspace')
+            return redirect(_workspace_url(project))
         if action == 'save':
-            return _save_file(request, grant)
+            return _save_file(request, grant, project)
         if action == 'create':
-            return _create_file(request, grant)
-        return _render(request, grant=grant, error=UNKNOWN_ACTION, status=400)
+            return _create_file(request, grant, project)
+        return _render(request, grant=grant, error=UNKNOWN_ACTION, project=project, status=400)
 
-    return _read_page(request, grant)
+    return _read_page(request, grant, project)
 
 
-def _grant_folder(request):
+def _grant_folder(request, project=None):
     form = GrantForm(request.POST)
     if not form.is_valid():
         return _render(
-            request, grant=get_grant(request), error=FORM_INVALID, grant_path=request.POST.get('path', ''),
-            status=400,
+            request, grant=_context_grant(request, project), error=FORM_INVALID,
+            grant_path=request.POST.get('path', ''), project=project, status=400,
         )
     path = form.cleaned_data['path']
+    if project is not None:
+        if not project.workspace_path:
+            return _render(request, grant=None, error=PROJECT_NO_PATH, project=project, status=400)
+        if not _same_path(path, project.workspace_path):
+            return _render(
+                request, grant=None, error=PROJECT_PATH_MISMATCH, project=project, status=400
+            )
     try:
         Workspace(Path(path)).validate_root()
     except WorkspaceError as exc:
         return _render(
-            request, grant=get_grant(request), error=_message(exc), grant_path=path, status=400
+            request, grant=_context_grant(request, project), error=_message(exc),
+            grant_path=path, project=project, status=400,
         )
     except (TypeError, ValueError):
         return _render(
-            request, grant=get_grant(request), error=_message(WorkspaceError('invalid_root')),
-            grant_path=path, status=400,
+            request, grant=_context_grant(request, project),
+            error=_message(WorkspaceError('invalid_root')), grant_path=path,
+            project=project, status=400,
         )
     # Authorization itself never creates folders or welcome files.
     request.session.pop(LEGACY_SESSION_KEY, None)
     request.session.cycle_key()
-    set_grant(request, str(Path(path)), uuid.uuid4().hex)
-    return redirect('workspaces:workspace')
+    set_grant(
+        request, str(Path(path)), uuid.uuid4().hex,
+        project_id=str(project.pk) if project is not None else '',
+    )
+    return redirect(_workspace_url(project))
 
 
 @never_cache
@@ -181,9 +254,9 @@ def folder_list(request):
     return JsonResponse(data)
 
 
-def _read_page(request, grant):
+def _read_page(request, grant, project=None):
     if not grant:
-        return _render(request, grant=None)
+        return _render(request, grant=None, project=project)
 
     workspace = _workspace(grant)
     current_dir = request.GET.get('dir', '')
@@ -223,10 +296,11 @@ def _read_page(request, grant):
         entries=entries,
         current_dir=current_dir,
         save_form=save_form,
+        project=project,
     )
 
 
-def _save_file(request, grant):
+def _save_file(request, grant, project=None):
     form = SaveForm(request.POST)
     directory = request.POST.get('directory', '')
     if not form.is_valid():
@@ -237,6 +311,7 @@ def _save_file(request, grant):
             entries=_entries(grant, directory),
             current_dir=directory,
             save_form=form,
+            project=project,
             status=400,
         )
     if form.cleaned_data['grant_id'] != grant['grant_id']:
@@ -247,6 +322,7 @@ def _save_file(request, grant):
             entries=_entries(grant, directory),
             current_dir=directory,
             save_form=form,
+            project=project,
             status=403,
         )
     path = form.cleaned_data['path']
@@ -260,16 +336,17 @@ def _save_file(request, grant):
             entries=_entries(grant, directory),
             current_dir=directory,
             save_form=form,
+            project=project,
             status=400,
         )
     messages.success(request, f'已保存：{path}')
     if '/' in path:
         directory = path.rsplit('/', 1)[0]
-        return redirect(f'/workspace/?dir={quote(directory)}&file={quote(path)}')
-    return redirect(f'/workspace/?file={quote(path)}')
+        return redirect(_workspace_url(project, directory=directory, file=path))
+    return redirect(_workspace_url(project, file=path))
 
 
-def _create_file(request, grant):
+def _create_file(request, grant, project=None):
     form = NewFileForm(request.POST)
     directory = request.POST.get('directory', '')
     if not form.is_valid():
@@ -280,6 +357,7 @@ def _create_file(request, grant):
             entries=_entries(grant, directory),
             current_dir=directory,
             new_form=form,
+            project=project,
             status=400,
         )
     if form.cleaned_data['grant_id'] != grant['grant_id']:
@@ -290,6 +368,7 @@ def _create_file(request, grant):
             entries=_entries(grant, directory),
             current_dir=directory,
             new_form=form,
+            project=project,
             status=403,
         )
     directory = form.cleaned_data['directory']
@@ -305,10 +384,11 @@ def _create_file(request, grant):
             entries=_entries(grant, directory),
             current_dir=directory,
             new_form=form,
+            project=project,
             status=400,
         )
     messages.success(request, f'已创建：{path}')
-    return redirect(f'/workspace/?dir={quote(directory)}' if directory else '/workspace/')
+    return redirect(_workspace_url(project, directory=directory or None))
 
 
 def _entries(grant, directory: str) -> list[dict[str, object]]:

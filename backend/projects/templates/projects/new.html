@@ -1,0 +1,35 @@
+{% extends 'projects/base.html' %}
+{% block title %}新建项目{% endblock %}
+{% block heading %}
+  <h1>新建项目</h1>
+  <p class="muted">项目只保存名称、说明与文件夹位置，不会复制或上传文件。</p>
+{% endblock %}
+{% block content %}
+  <section class="card">
+    <form method="post" action="{% url 'projects:new' %}">
+      {% csrf_token %}
+      <div class="field">
+        <label for="{{ form.name.id_for_label }}">{{ form.name.label }}</label>
+        {{ form.name }}
+        {{ form.name.errors }}
+      </div>
+      <div class="field">
+        <label for="{{ form.description.id_for_label }}">{{ form.description.label }}</label>
+        {{ form.description }}
+        {{ form.description.errors }}
+      </div>
+      {% if grant_root %}
+        <div class="field">
+          <label><input type="checkbox" name="link_grant"{% if linked %} checked{% endif %}> 关联当前已授权文件夹</label>
+          <p class="muted">将关联：<span class="dir">{{ grant_root }}</span></p>
+        </div>
+      {% else %}
+        <p class="muted">当前没有已授权文件夹。可先不关联直接创建，之后到 <a href="{% url 'workspaces:workspace' %}">工作区</a> 选择并授权文件夹，再回项目详情关联。</p>
+      {% endif %}
+      <div class="actions">
+        <button type="submit" class="primary">创建项目</button>
+        <a class="button secondary" href="{% url 'projects:list' %}">返回项目列表</a>
+      </div>
+    </form>
+  </section>
+{% endblock %}

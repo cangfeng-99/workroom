@@ -1,0 +1,27 @@
+{% extends 'projects/base.html' %}
+{% block title %}我的项目{% endblock %}
+{% block heading %}
+  <h1>我的项目</h1>
+  <p class="muted">项目只记住文件夹位置；打开项目后仍需显式授权该文件夹才能读写文件。</p>
+  <p><a class="button primary" href="{% url 'projects:new' %}">新建项目</a></p>
+{% endblock %}
+{% block content %}
+  <section class="card">
+    <h2>项目列表</h2>
+    {% if projects %}
+      <ul class="projects">
+        {% for project in projects %}
+          <li>
+            <a href="{% url 'projects:detail' project.pk %}">{{ project.name }}</a>
+            <p class="muted" style="margin:4px 0 0;">
+              {% if project.workspace_path %}已关联：<span class="dir">{{ project.workspace_path }}</span>{% else %}尚未关联文件夹{% endif %}
+              · 更新于 {{ project.updated_at|date:"Y-m-d H:i" }}
+            </p>
+          </li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <p class="empty">还没有项目。点击“新建项目”开始，也可以先到 <a href="{% url 'workspaces:workspace' %}">工作区</a> 授权一个文件夹。</p>
+    {% endif %}
+  </section>
+{% endblock %}

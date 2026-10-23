@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.test import Client, TestCase
 from workspaces import grants
@@ -15,11 +16,15 @@ class SignupTests(TestCase):
             'username': 'alice', 'password1': 'Str0ng-Pass!234', 'password2': 'Str0ng-Pass!234',
         })
 
-        self.assertRedirects(response, '/', fetch_redirect_response=False)
+        self.assertRedirects(
+            response, settings.LOGIN_REDIRECT_URL, fetch_redirect_response=False
+        )
         user = get_user_model().objects.get(username='alice')
         self.assertNotEqual(user.password, 'Str0ng-Pass!234')
         self.assertTrue(user.password.startswith('pbkdf2_'))
         self.assertTrue(user.check_password('Str0ng-Pass!234'))
+        self.assertFalse(user.is_staff)
+        self.assertFalse(user.is_superuser)
         self.assertEqual(self.client.session['_auth_user_id'], str(user.pk))
 
     def test_signup_rejects_duplicate_username(self) -> None:
@@ -64,7 +69,9 @@ class LoginLogoutTests(TestCase):
 
         response = self.client.post('/accounts/login/', {'username': 'alice', 'password': 'Str0ng-Pass!234'})
 
-        self.assertRedirects(response, '/', fetch_redirect_response=False)
+        self.assertRedirects(
+            response, settings.LOGIN_REDIRECT_URL, fetch_redirect_response=False
+        )
         self.assertEqual(self.client.session['_auth_user_id'], str(self.user.pk))
         self.assertNotIn(grants.SESSION_KEY, self.client.session)
         self.assertNotIn(grants.LEGACY_SESSION_KEY, self.client.session)
@@ -79,7 +86,9 @@ class LoginLogoutTests(TestCase):
         response = self.client.post('/accounts/login/', {
             'username': 'alice', 'password': 'Str0ng-Pass!234', 'next': 'https://evil.example/x',
         })
-        self.assertRedirects(response, '/', fetch_redirect_response=False)
+        self.assertRedirects(
+            response, settings.LOGIN_REDIRECT_URL, fetch_redirect_response=False
+        )
 
         self.client.logout()
         response = self.client.post('/accounts/login/', {
@@ -96,6 +105,7 @@ class LoginLogoutTests(TestCase):
         self.assertEqual(self.client.get('/accounts/logout/').status_code, 405)
         response = self.client.post('/accounts/logout/')
 
+        # Logout still lands on the public home page, not the project list.
         self.assertRedirects(response, '/', fetch_redirect_response=False)
         self.assertNotIn('_auth_user_id', self.client.session)
         self.assertNotIn(grants.SESSION_KEY, self.client.session)
@@ -106,8 +116,8 @@ class LoginLogoutTests(TestCase):
 
 class WorkspaceGateTests(TestCase):
     def setUp(self) -> None:
-        self.user = get_user_model().objects.create_user('alice', password='Str0ng-Pass!234')
-        self.other = get_user_model().objects.create_user('bob', password='Str0ng-Pass!234')
+        self.user = get_user_model().objects.create_user('alice')
+        self.other = get_user_model().objects.create_user('bob')
 
     def test_anonymous_workspace_redirects_to_login(self) -> None:
         response = self.client.get('/workspace/')

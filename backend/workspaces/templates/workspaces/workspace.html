@@ -65,7 +65,8 @@
       <p class="muted" style="display:flex; flex-wrap:wrap; gap:12px; align-items:center; justify-content:space-between;">
         <span>当前用户：<strong>{{ user.username }}</strong></span>
         <span>
-          <a href="{% url 'core:home' %}">首页</a>
+          <a href="{% url 'projects:list' %}">项目</a>
+          <a href="{% url 'core:home' %}" style="margin-left:8px;">首页</a>
           <form method="post" action="{% url 'accounts:logout' %}" class="inline" style="margin-left:8px;">
             {% csrf_token %}
             <button type="submit" class="secondary">退出登录</button>
@@ -73,6 +74,9 @@
         </span>
       </p>
       <h1>本机文件夹工作区</h1>
+      {% if project %}
+        <p class="muted">项目：<strong>{{ project.name }}</strong> · <a href="{% url 'projects:detail' project.pk %}">返回项目</a></p>
+      {% endif %}
       <p class="muted">页面只读写你授权的本机文件夹；内容不会上传，也不会被执行。</p>
       {% if granted %}
         <p><span class="status on">已授权</span></p>
@@ -86,6 +90,9 @@
       {% else %}
         <p><span class="status off">未授权</span></p>
         <p class="muted">授权一个已存在的本机文件夹后，才能浏览、读取、编辑和新建其中的文本文件。授权不会创建目录或欢迎文件。</p>
+        {% if project %}
+          <p class="muted">项目工作区只能授权项目已关联的文件夹：<span class="dir">{{ project.workspace_path }}</span>。如需更换，请返回项目详情重新关联。</p>
+        {% endif %}
         <form method="post" class="actions">
           {% csrf_token %}
           <input type="hidden" name="action" value="grant">
@@ -123,9 +130,9 @@
         <section class="card" aria-labelledby="files-title">
           <h2 id="files-title">目录内容</h2>
           <p class="breadcrumb">
-            <a href="?dir=">根目录</a>
+            <a href="?{% if project %}project={{ project.pk }}&amp;{% endif %}dir=">根目录</a>
             {% if current_dir %}/ <span class="dir">{{ current_dir }}</span>
-              <br><a href="?dir={{ parent_dir|urlencode }}">返回上级</a>
+              <br><a href="?{% if project %}project={{ project.pk }}&amp;{% endif %}dir={{ parent_dir|urlencode }}">返回上级</a>
             {% endif %}
           </p>
           {% if entries %}
@@ -133,9 +140,9 @@
               {% for entry in entries %}
                 <li>
                   {% if entry.kind == 'dir' %}
-                    <a href="?dir={{ entry.path|urlencode }}"><span class="kind">目录</span>{{ entry.name }}</a>
+                    <a href="?{% if project %}project={{ project.pk }}&amp;{% endif %}dir={{ entry.path|urlencode }}"><span class="kind">目录</span>{{ entry.name }}</a>
                   {% else %}
-                    <a href="?dir={{ current_dir|urlencode }}&amp;file={{ entry.path|urlencode }}"{% if save_form and save_form.path.value == entry.path %} aria-current="true"{% endif %}><span class="kind">文件</span>{{ entry.name }}</a>
+                    <a href="?{% if project %}project={{ project.pk }}&amp;{% endif %}dir={{ current_dir|urlencode }}&amp;file={{ entry.path|urlencode }}"{% if save_form and save_form.path.value == entry.path %} aria-current="true"{% endif %}><span class="kind">文件</span>{{ entry.name }}</a>
                   {% endif %}
                 </li>
               {% endfor %}
@@ -166,7 +173,7 @@
               </div>
               <div class="actions">
                 <button type="submit" class="primary">保存到原文件</button>
-                <a class="muted" href="?dir={{ current_dir|urlencode }}&amp;file={{ save_form.path.value|urlencode }}">重新读取</a>
+                <a class="muted" href="?{% if project %}project={{ project.pk }}&amp;{% endif %}dir={{ current_dir|urlencode }}&amp;file={{ save_form.path.value|urlencode }}">重新读取</a>
               </div>
               <p class="hint">保存前会核对读取时的版本；若文件已被外部修改则拒绝保存，并保留你当前的编辑。失败时原文件不会被替换。</p>
             </form>

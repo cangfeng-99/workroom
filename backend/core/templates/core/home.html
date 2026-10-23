@@ -17,7 +17,10 @@
     <h1>AI协作工作台</h1>
     <p class="ok">Django服务已启动</p>
     <p>当前提供首页、健康检查与本机文件夹工作区。</p>
-    <p><a href="/workspace/">进入本机文件夹工作区</a></p>
+    <p>
+      <a href="/projects/">我的项目</a> ·
+      <a href="/workspace/">进入本机文件夹工作区</a>
+    </p>
     <p><a href="/api/health/">健康接口 /api/health/</a></p>
     {% if user.is_authenticated %}
       <p>已登录：<strong>{{ user.username }}</strong></p>
