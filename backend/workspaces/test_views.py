@@ -6,6 +6,7 @@ import re
 import tempfile
 from pathlib import Path
 
+from django.contrib.auth import get_user_model
 from django.test import Client, TestCase
 
 from workspaces import views as workspace_views
@@ -18,7 +19,9 @@ class WorkspacePageTests(TestCase):
         self.base = Path(self.tmp.name)
         self.root = self.base / 'project'
         self.root.mkdir()
+        self.user = get_user_model().objects.create_user('alice', password='Str0ng-Pass!234')
         self.client = Client()
+        self.client.force_login(self.user)
 
     # -- helpers -------------------------------------------------------
     def grant(self, path: Path | str | None = None) -> None:
@@ -89,9 +92,10 @@ class WorkspacePageTests(TestCase):
         self.assertEqual(denied.status_code, 403)
         self.assertFalse((self.root / 'x.txt').exists())
 
-    def test_other_browser_has_no_grant(self) -> None:
+    def test_other_browser_same_user_has_no_grant(self) -> None:
         self.grant()
         other = Client()
+        other.force_login(self.user)
 
         self.assertIn('未授权', other.get('/workspace/').content.decode('utf-8'))
         denied = other.post(
@@ -348,6 +352,7 @@ class WorkspacePageTests(TestCase):
     # -- security ------------------------------------------------------
     def test_post_without_csrf_token_is_rejected(self) -> None:
         csrf_client = Client(enforce_csrf_checks=True)
+        csrf_client.force_login(self.user)
 
         response = csrf_client.post('/workspace/', {'action': 'grant', 'path': str(self.root)})
 
@@ -482,7 +487,9 @@ class FolderBrowserEndpointTests(TestCase):
         (self.root / 'src').mkdir()
         (self.root / '文档').mkdir()
         (self.root / 'note.txt').write_text('DO-NOT-READ', encoding='utf-8')
+        self.user = get_user_model().objects.create_user('alice', password='Str0ng-Pass!234')
         self.client = Client()
+        self.client.force_login(self.user)
 
     def snapshot(self) -> set[str]:
         return {str(item.relative_to(self.base)) for item in self.base.rglob('*')}
@@ -540,6 +547,7 @@ class FolderBrowserEndpointTests(TestCase):
 
     def test_csrf_token_is_required(self) -> None:
         csrf_client = Client(enforce_csrf_checks=True)
+        csrf_client.force_login(self.user)
 
         response = csrf_client.post('/workspace/folders/', {'path': str(self.root)})
 

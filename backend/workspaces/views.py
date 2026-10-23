@@ -14,17 +14,22 @@ from pathlib import Path
 from urllib.parse import quote
 
 from django.contrib import messages
+from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
 from django.shortcuts import redirect, render
 from django.views.decorators.cache import never_cache
 from django.views.decorators.http import require_http_methods, require_POST
 
 from workspaces.forms import GrantForm, NewFileForm, SaveForm
+from workspaces.grants import (
+    LEGACY_SESSION_KEY,
+    clear_grant,
+    get_grant,
+    set_grant,
+)
 from workspaces.picker import PickerError, browse
 from workspaces.services import Workspace, WorkspaceError
 
-SESSION_KEY = 'workspace_grant_v2'
-LEGACY_SESSION_KEY = 'workspace_grant_root'
 UNKNOWN_ACTION = '无法识别的操作，请刷新页面后重试。'
 NEED_GRANT = '请先授权一个本机文件夹，然后再操作文件。'
 STALE_GRANT = '授权已变更或页面已过期，本次操作未写入任何文件。请刷新页面后重试。'
@@ -56,17 +61,6 @@ _PICK_NOTICE = (
     '请点击“选择文件夹…”打开页面内目录选择器；也可以直接输入完整路径后授权。'
     '此操作没有授权任何文件夹。'
 )
-
-
-def _grant(request) -> dict[str, str] | None:
-    data = request.session.get(SESSION_KEY)
-    if not isinstance(data, dict):
-        return None
-    root = data.get('root')
-    grant_id = data.get('grant_id')
-    if not isinstance(root, str) or not root or not isinstance(grant_id, str) or not grant_id:
-        return None
-    return {'root': root, 'grant_id': grant_id}
 
 
 def _workspace(grant: dict[str, str]) -> Workspace:
@@ -121,9 +115,10 @@ def _render(
 
 
 @never_cache
+@login_required
 @require_http_methods(['GET', 'POST'])
 def workspace_page(request):
-    grant = _grant(request)
+    grant = get_grant(request)
 
     if request.method == 'POST':
         action = request.POST.get('action')
@@ -136,8 +131,7 @@ def workspace_page(request):
         if not grant:
             return _render(request, grant=None, error=NEED_GRANT, status=403)
         if action == 'revoke':
-            request.session.pop(SESSION_KEY, None)
-            request.session.pop(LEGACY_SESSION_KEY, None)
+            clear_grant(request)
             return redirect('workspaces:workspace')
         if action == 'save':
             return _save_file(request, grant)
@@ -152,7 +146,7 @@ def _grant_folder(request):
     form = GrantForm(request.POST)
     if not form.is_valid():
         return _render(
-            request, grant=_grant(request), error=FORM_INVALID, grant_path=request.POST.get('path', ''),
+            request, grant=get_grant(request), error=FORM_INVALID, grant_path=request.POST.get('path', ''),
             status=400,
         )
     path = form.cleaned_data['path']
@@ -160,17 +154,17 @@ def _grant_folder(request):
         Workspace(Path(path)).validate_root()
     except WorkspaceError as exc:
         return _render(
-            request, grant=_grant(request), error=_message(exc), grant_path=path, status=400
+            request, grant=get_grant(request), error=_message(exc), grant_path=path, status=400
         )
     except (TypeError, ValueError):
         return _render(
-            request, grant=_grant(request), error=_message(WorkspaceError('invalid_root')),
+            request, grant=get_grant(request), error=_message(WorkspaceError('invalid_root')),
             grant_path=path, status=400,
         )
     # Authorization itself never creates folders or welcome files.
     request.session.pop(LEGACY_SESSION_KEY, None)
     request.session.cycle_key()
-    request.session[SESSION_KEY] = {'root': str(Path(path)), 'grant_id': uuid.uuid4().hex}
+    set_grant(request, str(Path(path)), uuid.uuid4().hex)
     return redirect('workspaces:workspace')
 
 
@@ -178,6 +172,8 @@ def _grant_folder(request):
 @require_POST
 def folder_list(request):
     """Return folder names/paths for the page dialog; never reads file contents."""
+    if not request.user.is_authenticated:
+        return JsonResponse({'error': 'authentication_required'}, status=401)
     try:
         data = browse(request.POST.get('path', ''))
     except PickerError as exc:

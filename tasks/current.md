@@ -1,6 +1,27 @@
 # 当前任务
 
-## 最新快照（P1：本地文件夹工作区已获用户验收）
+## 最新快照（T012A已复核，T012B项目闭环派发）
+- PLAN-r5 / RULES-r8。T012A ACCEPTED_BY_CODEX：注册/登录/POST退出与账号归属授权代码已独立审阅，134 passed/1 skipped，ruff/check通过。浏览器完整验收留到B集成后一次完成。
+- T012B APPROVED：WorkBuddy新增本人Project与增量迁移、创建/列表/详情、关联当前授权文件夹、project上下文工作区。规格T012-accounts-projects.md的B段；只一个写入者，不派额外agent。
+- 仅B范围及必要accounts测试默认登录重定向联动；当前服务继续运行，B不应用真实迁移/不重启。完成后Codex审阅迁移、应用本机开发库并做真实Chrome完整闭环。
+- 此阶段用户授权完整A+B，不需在小任务之间重问；完成后等待用户验收，不进入P3。
+
+## 上一快照（T012A：账号与文件权限归属完成，待Codex复核）
+- 状态DONE_PENDING_CODEX_REVIEW；PLAN-r5 / RULES-r8，基线3be613c+Codex文档改动。仅WorkBuddy写入，未派agent、未联网/装依赖/未起服务/未commit、未迁移/重置DB、未建真实账号。
+- 新增accounts app：/accounts/signup/（UserCreationForm，注册即登录）、/accounts/login/（LoginView子类）、POST /accounts/logout/（LogoutView，GET405）；登录/注册清除旧文件夹授权，退出flush session；外站next被拒。LOGIN_REDIRECT_URL暂为首页，projects留T012B。
+- 新增workspaces/grants.py：grant含user_id，get_grant仅接受已登录且user_id匹配；旧匿名/缺失user_id授权失效，project_id预留空串。workspace页面login_required；匿名/folders返回401 JSON；health保持公开。
+- 旧HTTP测试加真实User+force_login，保留原CSRF/越界/链接/跨会话/撤销/冲突/文件名断言；“另一浏览器”改为同账号另一Client无grant仍403。
+- 验证：RED accounts ImportError EXIT=2 → GREEN accounts 12 passed；workspaces/test_views 35 passed；完整pytest 134 passed/1 skipped（既有symlink权限跳过）EXIT=0；ruff backend tools All checks passed；manage.py check 0 issues。日志tasks/logs/T012A.log。
+- 未验证：真实浏览器注册/登录/退出与8000实机（autoreload已加载，不重复启动）；T012B项目功能未开始。
+
+## 上一快照（T012派发：P2账号与项目开始）
+- PLAN-r5 / RULES-r8；基线3be613c、开工git干净，无其它活跃WB任务。用户“开始下一步”明确授权P2，P1已验收。
+- T012A APPROVED：WorkBuddy实现Django注册/登录/POST退出，文件接口登录门禁与用户绑定授权；T012B随后实现本人项目与工作区关联。只一个写入者，不派额外agent。
+- 规格tasks/specs/T012-accounts-projects.md。当前开发SQLite继续使用，已有auth/session表保留；项目增量迁移前已备份到.tools/backups。无模型API/MySQL/外部服务。
+- 运行服务127.0.0.1:8000，exec session19518，沿用autoreload，禁止重复起服务。新app加载/迁移完成后Codex必要时重启并做真实浏览器验收。
+- 本阶段完成后交用户体验，不进入团队/任务/Agent阶段。
+
+## 上一快照（P1：本地文件夹工作区已获用户验收）
 - 版本PLAN-r4 / RULES-r7。状态ACCEPTED_BY_USER；用户于2026-10-23确认文件夹授权和读写已可用，完成当前规格的第一步验收。
 - 已接受：实际文件夹作为工作区；页面内选择目录→显式授权→浏览/读取→编辑保存回原位置与新建→撤销。技术证据沿用T010/T011，用户验收见tasks/acceptance/T011.md。
 - 此次仅更新验收/路线/约束事实，无业务源码改动、无新派发或后台任务，不重跑未变化的业务测试。

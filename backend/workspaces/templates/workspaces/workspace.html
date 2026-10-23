@@ -62,6 +62,16 @@
 <body>
   <main>
     <header>
+      <p class="muted" style="display:flex; flex-wrap:wrap; gap:12px; align-items:center; justify-content:space-between;">
+        <span>当前用户：<strong>{{ user.username }}</strong></span>
+        <span>
+          <a href="{% url 'core:home' %}">首页</a>
+          <form method="post" action="{% url 'accounts:logout' %}" class="inline" style="margin-left:8px;">
+            {% csrf_token %}
+            <button type="submit" class="secondary">退出登录</button>
+          </form>
+        </span>
+      </p>
       <h1>本机文件夹工作区</h1>
       <p class="muted">页面只读写你授权的本机文件夹；内容不会上传，也不会被执行。</p>
       {% if granted %}
@@ -231,6 +241,7 @@
   var openButtons = document.querySelectorAll('#open-picker');
 
   var ERRORS = {
+    authentication_required: '请先登录后再选择文件夹。',
     invalid_path: '路径无效：请输入本机绝对目录，不能是相对路径、UNC、设备路径或包含 .. 。',
     not_found: '找不到这个目录，可能已被移动或删除。',
     not_a_directory: '该路径不是文件夹。',

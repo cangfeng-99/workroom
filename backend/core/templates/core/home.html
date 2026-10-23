@@ -19,6 +19,15 @@
     <p>当前提供首页、健康检查与本机文件夹工作区。</p>
     <p><a href="/workspace/">进入本机文件夹工作区</a></p>
     <p><a href="/api/health/">健康接口 /api/health/</a></p>
+    {% if user.is_authenticated %}
+      <p>已登录：<strong>{{ user.username }}</strong></p>
+      <form method="post" action="{% url 'accounts:logout' %}">
+        {% csrf_token %}
+        <button type="submit">退出登录</button>
+      </form>
+    {% else %}
+      <p><a href="{% url 'accounts:login' %}">登录</a> · <a href="{% url 'accounts:signup' %}">注册</a></p>
+    {% endif %}
   </main>
 </body>
 </html>
