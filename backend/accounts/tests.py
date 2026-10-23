@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from urllib.parse import urlencode
+
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.test import Client, TestCase
@@ -55,6 +57,55 @@ class SignupTests(TestCase):
         })
         self.assertEqual(response.status_code, 403)
         self.assertIn('no-store', self.client.get(self.url)['Cache-Control'])
+
+    def test_signup_returns_to_internal_next_and_clears_grant(self) -> None:
+        session = self.client.session
+        session[grants.SESSION_KEY] = {'root': 'D:/x', 'grant_id': 'g', 'user_id': '1'}
+        session.save()
+        destination = '/projects/join/abc%3Adef/'
+
+        response = self.client.post(self.url, {
+            'username': 'nextuser', 'password1': 'Str0ng-Pass!234',
+            'password2': 'Str0ng-Pass!234', 'next': destination,
+        })
+
+        self.assertRedirects(response, destination, fetch_redirect_response=False)
+        self.assertNotIn(grants.SESSION_KEY, self.client.session)
+
+    def test_signup_rejects_external_and_scheme_relative_next(self) -> None:
+        for destination in ('https://evil.example/x', '//evil.example/x', 'http://other/'):
+            with self.subTest(destination=destination):
+                username = f'user{abs(hash(destination)) % 10000}'
+                response = self.client.post(self.url, {
+                    'username': username, 'password1': 'Str0ng-Pass!234',
+                    'password2': 'Str0ng-Pass!234', 'next': destination,
+                })
+                self.assertRedirects(
+                    response, settings.LOGIN_REDIRECT_URL, fetch_redirect_response=False
+                )
+                self.client.logout()
+
+    def test_signup_keeps_safe_next_on_invalid_form_and_links(self) -> None:
+        destination = '/projects/join/abc/'
+        response = self.client.post(self.url, {
+            'username': '', 'password1': 'x', 'password2': 'y', 'next': destination,
+        })
+        body = response.content.decode('utf-8')
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(f'name="next" value="{destination}"', body)
+        self.assertIn(f'/accounts/login/?{urlencode({"next": destination})}', body)
+
+    def test_login_page_links_to_signup_with_safe_next(self) -> None:
+        body = self.client.get('/accounts/login/', {'next': '/projects/join/abc/'}).content.decode('utf-8')
+
+        self.assertIn('name="next" value="/projects/join/abc/"', body)
+        self.assertIn('/accounts/signup/?next=%2Fprojects%2Fjoin%2Fabc%2F', body)
+
+    def test_signup_page_does_not_reflect_external_next(self) -> None:
+        body = self.client.get(self.url, {'next': 'https://evil.example/x'}).content.decode('utf-8')
+
+        self.assertNotIn('evil.example', body)
 
 
 class LoginLogoutTests(TestCase):

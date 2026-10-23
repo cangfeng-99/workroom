@@ -8,6 +8,7 @@ administrative rights; the project owner keeps both.
 
 from __future__ import annotations
 
+import uuid
 from typing import ClassVar
 
 from django.conf import settings
@@ -79,6 +80,36 @@ class ProjectMember(models.Model):
         if self.kind == self.Kind.HUMAN and self.user_id is not None:
             self.name = self.user.username
         return super().save(*args, **kwargs)
+
+
+class ProjectInvitation(models.Model):
+    """A one-time signed link that only adds a human role to a project.
+
+    The raw signature is never stored: the URL is rebuilt from the UUID with
+    django.core.signing. Expiry, use and revocation are database facts.
+    """
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='invitations')
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, related_name='sent_invitations',
+        null=True, blank=True,
+    )
+    role = models.CharField(max_length=80, blank=True)
+    expires_at = models.DateTimeField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    revoked_at = models.DateTimeField(null=True, blank=True)
+    used_at = models.DateTimeField(null=True, blank=True)
+    used_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, related_name='used_invitations',
+        null=True, blank=True,
+    )
+
+    class Meta:
+        ordering = ('-created_at', '-pk')
+
+    def __str__(self) -> str:
+        return f'{self.project_id}:{self.pk}'
 
 
 class TaskNode(models.Model):

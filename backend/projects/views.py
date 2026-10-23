@@ -86,6 +86,14 @@ def project_list(request):
         'projects/list.html',
         {
             'projects': projects,
+            'joined_memberships': (
+                ProjectMember.objects.filter(
+                    user=request.user, kind=ProjectMember.Kind.HUMAN
+                )
+                .exclude(project__owner=request.user)
+                .select_related('project')
+                .order_by('-project__updated_at', '-pk')
+            ),
             'grant': grant,
             'grant_project': grant_project,
             'grant_usable': grant_usable,

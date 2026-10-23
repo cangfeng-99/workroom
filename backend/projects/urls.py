@@ -1,15 +1,27 @@
 from django.urls import path
 
-from projects import board_views, views
+from projects import board_views, invite_views, views
 
 app_name = 'projects'
 
 urlpatterns = [
     path('', views.project_list, name='list'),
     path('new/', views.project_new, name='new'),
+    path('join/<str:token>/', invite_views.invitation_join, name='invitation_join'),
     path('<int:pk>/', views.project_detail, name='detail'),
     path('<int:pk>/workspace/', views.project_link_workspace, name='link_workspace'),
     path('<int:pk>/open/', views.project_open, name='open'),
+    path('<int:pk>/invitations/', invite_views.invitation_list, name='invitation_list'),
+    path(
+        '<int:pk>/invitations/new/',
+        invite_views.invitation_create,
+        name='invitation_create',
+    ),
+    path(
+        '<int:pk>/invitations/<uuid:invite_pk>/revoke/',
+        invite_views.invitation_revoke,
+        name='invitation_revoke',
+    ),
     path('<int:pk>/board/', board_views.board, name='board'),
     path('<int:pk>/board/members/', board_views.member_add, name='member_add'),
     path(

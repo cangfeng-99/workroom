@@ -1,0 +1,83 @@
+{% extends 'projects/base.html' %}
+{% load static %}
+{% block title %}邀请成员 · {{ project.name }}{% endblock %}
+{% block extra_head %}<link rel="stylesheet" href="{% static 'projects/invites.css' %}">{% endblock %}
+{% block heading %}
+  <p class="eyebrow">工作台 / 项目 / 团队</p>
+  <h1>邀请成员 · {{ project.name }}</h1>
+  <p class="page-sub">一次性邀请链接由当前项目所有者生成。受邀成员确认加入后只获得该分工角色，不获得所有者权限或本机文件访问。</p>
+{% endblock %}
+{% block content %}
+  <p class="back-link"><a href="{% url 'projects:board' project.pk %}">← 返回协作画布</a></p>
+
+  <section class="card">
+    <div class="card-head">
+      <div>
+        <h2>生成邀请链接</h2>
+        <p>链接只能使用一次，到期或撤销后立即失效；此页面可再次查看仍有效的链接。</p>
+      </div>
+    </div>
+    <form method="post" action="{% url 'projects:invitation_create' project.pk %}" class="invite-form">
+      {% csrf_token %}
+      <div class="field">
+        <label for="{{ form.role.id_for_label }}">分工角色</label>
+        {{ form.role }}
+        {{ form.role.errors }}
+      </div>
+      <div class="field">
+        <label for="{{ form.days.id_for_label }}">有效期</label>
+        {{ form.days }}
+        {{ form.days.errors }}
+      </div>
+      <div class="actions">
+        <button type="submit" class="primary">生成链接</button>
+      </div>
+    </form>
+    <p class="muted">默认 7 天。邀请只对当前服务有效（本机 127.0.0.1），不会替你将链接发送给任何人，也不包含文件夹路径或授权。</p>
+  </section>
+
+  <section class="card">
+    <div class="card-head">
+      <div>
+        <h2>邀请记录</h2>
+        <p>最多显示最近 50 条。只有仍有效的邀请才会显示可复制的链接。</p>
+      </div>
+      <span class="count">{{ entries|length }} 条</span>
+    </div>
+    {% if entries %}
+      <ul class="invite-list">
+        {% for entry in entries %}
+          <li class="invite-item" data-state="{{ entry.state }}">
+            <div class="invite-meta">
+              <p class="invite-role">{{ entry.invitation.role|default:'未填写分工' }}</p>
+              <p class="muted">
+                <span class="status {% if entry.state == 'valid' %}on{% else %}off{% endif %}">{{ entry.label }}</span>
+                <span class="meta-sep">·</span>到期 {{ entry.invitation.expires_at|date:"Y-m-d H:i" }}
+                {% if entry.invitation.used_at %}<span class="meta-sep">·</span>已由 {{ entry.invitation.used_by.username|default:'某账号' }} 使用{% endif %}
+              </p>
+            </div>
+            {% if entry.url %}
+              <div class="invite-link">
+                <label class="sr-only" for="invite-url-{{ entry.invitation.pk }}">邀请链接</label>
+                <input id="invite-url-{{ entry.invitation.pk }}" type="text" value="{{ entry.url }}" readonly>
+                <button type="button" class="button secondary" data-copy-invite="invite-url-{{ entry.invitation.pk }}">复制链接</button>
+              </div>
+              <form method="post" action="{% url 'projects:invitation_revoke' project.pk entry.invitation.pk %}" class="invite-revoke">
+                {% csrf_token %}
+                <button type="submit" class="button ghost">撤销链接</button>
+              </form>
+            {% endif %}
+          </li>
+        {% endfor %}
+      </ul>
+      <p class="muted" data-copy-hint hidden>复制不可用：请选中上方链接后按 Ctrl+C 复制。</p>
+    {% else %}
+      <p class="empty">还没有邀请记录。</p>
+    {% endif %}
+  </section>
+
+  <p class="back-link"><a href="{% url 'projects:board' project.pk %}">返回协作画布</a></p>
+{% endblock %}
+{% block scripts %}
+  <script src="{% static 'projects/invites.js' %}" defer></script>
+{% endblock %}

@@ -1,0 +1,40 @@
+/* T017 invitation page: small layout on top of the shared app styles. */
+.invite-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: flex-end;
+  margin-top: 12px;
+}
+.invite-form .field { flex: 1 1 180px; margin: 0; }
+.invite-list { list-style: none; margin: 12px 0 0; padding: 0; display: grid; gap: 10px; }
+.invite-item {
+  border: 1px solid #e3e6ea;
+  border-radius: 10px;
+  padding: 12px;
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+.invite-role { font-weight: 600; overflow-wrap: anywhere; }
+.invite-link { display: flex; gap: 8px; min-width: 0; }
+.invite-link input {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 12px;
+  padding: 6px 8px;
+  border: 1px solid #cfd4da;
+  border-radius: 8px;
+  background: #f7f8fa;
+  color: #40474e;
+}
+.invite-link .button { flex: 0 0 auto; white-space: nowrap; }
+.invite-revoke { margin: 0; }
+.invite-summary { display: grid; gap: 6px; margin: 12px 0; }
+.invite-summary div { display: flex; gap: 10px; flex-wrap: wrap; }
+.invite-summary dt { color: #7c848c; min-width: 70px; }
+.invite-summary dd { margin: 0; overflow-wrap: anywhere; }
+@media (max-width: 520px) {
+  .invite-link { flex-direction: column; }
+  .invite-link .button { width: 100%; }
+}

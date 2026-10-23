@@ -326,6 +326,9 @@
           <button type="button" class="button secondary" data-open-dialog="member-dialog">添加成员</button>
         {% endif %}
       </div>
+      {% if is_owner %}
+        <p class="side-note"><a href="{% url 'projects:invitation_list' project.pk %}">邀请成员</a>：生成一次性链接，受邀者注册或登录后确认加入，只获得分工角色。</p>
+      {% endif %}
       <ul class="team-list">
         {% for member in members %}
           <li class="team-member">
@@ -356,7 +359,7 @@
           <li class="side-empty">还没有成员。</li>
         {% endfor %}
       </ul>
-      <p class="side-note">AI 成员只表示分工角色，未连接任何模型或工具，不会自动执行任务。邀请链接为后续功能。</p>
+      <p class="side-note">AI 成员只表示分工角色，未连接任何模型或工具，不会自动执行任务。邀请链接一次性使用，仅用于加入团队，不授予文件访问。</p>
     </section>
 
     {% if is_owner %}

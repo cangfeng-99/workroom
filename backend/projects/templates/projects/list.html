@@ -50,8 +50,7 @@
         <p>只显示当前账号创建的项目；授权状态按本次登录计算。</p>
       </div>
       {% if projects %}<span class="count" id="project-count" aria-live="polite">{{ projects|length }} 个项目</span>{% endif %}
-    </div>
-    {% if projects %}
+    </div>    {% if projects %}
       <div class="toolbar" role="search">
         <label class="search-box" for="project-search">
           <span class="sr-only">搜索项目名称或说明</span>
@@ -106,4 +105,34 @@
       <p class="empty">还没有项目。点击“新建项目”开始，也可以先到 <a href="{% url 'workspaces:workspace' %}">工作区</a> 授权一个文件夹。</p>
     {% endif %}
   </section>
+
+  {% if joined_memberships %}
+    <section class="card">
+      <div class="card-head">
+        <div>
+          <h2>参与的项目</h2>
+          <p>你是下列项目的团队成员，可以打开协作画布并更新分配给自己任务的进度；不含文件夹位置与授权设置。</p>
+        </div>
+        <span class="count">{{ joined_memberships|length }} 个项目</span>
+      </div>
+      <ul class="projects project-list">
+        {% for membership in joined_memberships %}
+          <li class="project-item">
+            <span class="project-icon" aria-hidden="true">{{ membership.project.name|slice:":1" }}</span>
+            <div class="project-info">
+              <div class="title-line">
+                <a class="project-title" href="{% url 'projects:board' membership.project.pk %}">{{ membership.project.name }}</a>
+                <span class="status on">团队成员</span>
+              </div>
+              <p class="meta-line">
+                分工：{{ membership.role|default:'未填写分工' }}
+                <span class="meta-sep">·</span>所有者：{{ membership.project.owner.username }}
+                <span class="meta-sep">·</span>更新于 {{ membership.project.updated_at|date:"Y-m-d H:i" }}
+              </p>
+            </div>
+          </li>
+        {% endfor %}
+      </ul>
+    </section>
+  {% endif %}
 {% endblock %}

@@ -20,6 +20,6 @@
     </div>
     <button type="submit" class="primary">登录</button>
   </form>
-  <p class="switch"><a href="{% url 'accounts:signup' %}">还没有账号？注册</a></p>
+  <p class="switch"><a href="{% url 'accounts:signup' %}{% if next %}?next={{ next|urlencode:'' }}{% endif %}">还没有账号？注册</a></p>
   <p class="switch"><a href="{% url 'core:home' %}">返回首页</a></p>
 {% endblock %}

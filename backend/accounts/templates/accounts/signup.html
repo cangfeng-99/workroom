@@ -6,6 +6,7 @@
   <p class="auth-sub">创建本机账号后即可建立项目并授权文件夹。</p>
   <form method="post">
     {% csrf_token %}
+    {% if next %}<input type="hidden" name="next" value="{{ next }}">{% endif %}
     {% for field in form %}
       <div class="field">
         <label for="{{ field.id_for_label }}">{{ field.label }}</label>
@@ -16,6 +17,6 @@
     {% endfor %}
     <button type="submit" class="primary">注册并登录</button>
   </form>
-  <p class="switch"><a href="{% url 'accounts:login' %}">已有账号？登录</a></p>
+  <p class="switch"><a href="{% url 'accounts:login' %}{% if next %}?next={{ next|urlencode:'' }}{% endif %}">已有账号？登录</a></p>
   <p class="switch"><a href="{% url 'core:home' %}">返回首页</a></p>
 {% endblock %}

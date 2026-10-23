@@ -1,0 +1,76 @@
+{% extends 'projects/base.html' %}
+{% load static %}
+{% block extra_head %}<link rel="stylesheet" href="{% static 'projects/invites.css' %}">{% endblock %}
+{% block title %}加入项目 · AI协作工作台{% endblock %}
+{% block heading %}
+  <p class="eyebrow">团队邀请</p>
+  <h1>{% if mode == 'gone' %}邀请已失效{% elif mode == 'failure' %}无法加入{% else %}确认加入项目{% endif %}</h1>
+{% endblock %}
+{% block content %}
+  {% if not user.is_authenticated %}
+    <h1>{% if mode == 'gone' %}邀请已失效{% elif mode == 'failure' %}无法加入{% else %}确认加入项目{% endif %}</h1>
+  {% endif %}
+  {% if mode == 'gone' %}
+    <section class="card">
+      <div class="card-head">
+        <div>
+          <h2>该邀请链接不可用</h2>
+          <p>{{ error }}</p>
+        </div>
+        <span class="status off">已失效</span>
+      </div>
+      <p class="muted">一个邀请只能使用一次，也可能已被项目所有者撤销或超过有效期。请向项目所有者索取新的链接。</p>
+      <p class="actions">
+        <a class="button secondary" href="{% url 'core:home' %}">返回首页</a>
+        {% if user.is_authenticated %}<a class="button ghost" href="{% url 'projects:list' %}">我的项目</a>{% endif %}
+      </p>
+    </section>
+  {% elif mode == 'failure' %}
+    <section class="card">
+      <div class="card-head">
+        <div>
+          <h2>加入未完成</h2>
+          <p>{{ error }}</p>
+        </div>
+      </div>
+      <p class="muted">邀请没有被消耗，可以重新打开此链接再试一次，或联系项目所有者。</p>
+      <p class="actions"><a class="button secondary" href="{{ request.path }}">重新打开邀请</a></p>
+    </section>
+  {% else %}
+    <section class="card">
+      <div class="card-head">
+        <div>
+          <h2>{{ project.name }}</h2>
+          <p>你将作为真人成员加入该项目。</p>
+        </div>
+        <span class="status on">一次性邀请</span>
+      </div>
+      <dl class="invite-summary">
+        <div><dt>项目</dt><dd>{{ project.name }}</dd></div>
+        <div><dt>分工角色</dt><dd>{{ invitation.role|default:'未填写分工' }}</dd></div>
+        <div><dt>链接到期</dt><dd>{{ invitation.expires_at|date:"Y-m-d H:i" }}</dd></div>
+      </dl>
+      <p class="muted">加入后可以查看该项目的协作画布，并更新分配给自己任务的进度。你不会获得项目所有者权限、文件夹位置或任何本机文件访问。</p>
+
+      {% if mode == 'confirm' %}
+        <p>当前账号：<strong>{{ user.username }}</strong></p>
+        <form method="post" action="{{ request.path }}">
+          {% csrf_token %}
+          <div class="actions">
+            <button type="submit" class="primary">确认加入</button>
+            <a class="button ghost" href="{% url 'projects:list' %}">取消</a>
+          </div>
+        </form>
+      {% elif mode == 'anonymous' %}
+        <p class="muted">请先登录或注册，登录后会回到此页再次确认加入。</p>
+        <div class="actions">
+          <a class="button primary" href="{{ login_url }}">登录</a>
+          <a class="button secondary" href="{{ signup_url }}">注册新账号</a>
+        </div>
+      {% elif mode == 'already' %}
+        <p class="status on">你已经是该项目成员，此邀请不会被重复使用。</p>
+        <p class="actions"><a class="button primary" href="{{ board_url }}">进入项目画布</a></p>
+      {% endif %}
+    </section>
+  {% endif %}
+{% endblock %}
