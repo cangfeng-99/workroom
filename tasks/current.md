@@ -1,6 +1,24 @@
 # 当前任务
 
-## 最新快照（T010：实际文件夹工作区技术验收通过，待用户体验）
+## 最新快照（T011：选择文件夹等待问题已修复，待用户体验）
+- PLAN-r3 / RULES-r6。状态ACCEPTED_BY_CODEX_WAITING_USER_REVIEW；本次仅修复当前工作区步骤，不跨阶段。
+- 用户报告原按钮一直转圈无弹窗；旧action=pick同步等后台PowerShell ShowDialog，相关进程无可见窗口。旧native mock验收不能证明实机可用，已替换为页面内目录dialog。
+- 当前流程：选择文件夹→立即打开网页dialog→驱动器/子目录/上级/绝对路径导航→使用此文件夹回填→单独点击授权。关闭/ESC不改输入或授权；请求8秒超时可重试，关闭中止、过期响应忽略；浏览仅目录元数据，不开文件内容。
+- 已移除subprocess/PowerShell选择器；旧pick POST快速提示。新POST/workspace/folders/保留CSRF/no-store，只列普通非隐藏目录，拒绝UNC/设备/相对/..与链接等，原root+grant_id/文件读写保护不变。
+- WorkBuddy主要实现已落盘，通道300秒超时后仍执行且未回填；Codex核对并停止唯一node33156任务树后接管，没有并发写入或重复派发。未取得WB最终报告；检查与验收以Codex实际结果为准。
+- 开发时新增static目录曾使运行服务脚本404；当前脚本已内联，并完整重启项目服务。现Run-Backend.cmd exec session19518，127.0.0.1:8000；旧75882已Ctrl+C结束。不要重复起8000。
+- 验证：pytest122 passed/1 skipped（既有真实file symlink权限跳过）；ruff backend/tools、Django check、git diff --check通过。补浏览不打开文件内容测试；..验证内存变异被回归捕获，实际源码未改。
+- Chrome真实点击选择器、目录进入/返回/空目录、错误恢复、选择填路径、关闭/ESC、8秒超时重试、关闭后重开通过；随后授权→原位置编辑/新建→冲突→换根旧授权拒绝→撤销全流程通过，页面脚本错误0，390px无横向溢出。
+- 证据tasks/acceptance/T011.md、tasks/reports/T011-browser.json、T011-picker-{desktop,mobile}.png。首轮拦截器清理CancelledError已修正QA脚本并重跑，无产品页面异常。
+- 下一步：用户刷新http://127.0.0.1:8000/workspace/，体验页面内选择器及授权。原文本64KiB/100项/不执行命令等边界继续适用；未接AI，不自动推进下一阶段。
+
+## 上一快照（T011派发：修复选择文件夹后页面等待）
+- PLAN-r3 / RULES-r6；基线e53b058，开工git干净。用户实测选择按钮一直转圈、没有弹窗，授权修复当前步骤。
+- 已定位：action=pick同步调用PowerShell原生ShowDialog，HTTP等120秒；实机存在server32484的picker子进程，无可见主窗口。此前仅mock并未验证真实弹窗，不能沿用为可用证据。
+- T011 APPROVED：由WorkBuddy改为页面内文件夹选择器，只浏览文件夹名称/路径、选择填入路径，再显式授权。移除PowerShell阻塞入口；保持现有授权、保存、撤销规则，无新依赖/桌面框架。
+- Codex规格tasks/specs/T011-folder-picker-fix.md；WorkBuddy唯一写入者，结束后Codex真实浏览器点击验收。不得重复启动8000服务，不自动跨阶段。
+
+## 上一快照（T010：实际文件夹工作区技术验收通过，待用户体验）
 - 版本PLAN-r3 / RULES-r6。状态ACCEPTED_BY_CODEX_WAITING_USER_REVIEW；用户选定的文件夹就是工作区，T009固定demo语义已由本次用户要求替代，不自动跨阶段。
 - 地址http://127.0.0.1:8000/workspace/，沿用本机服务exec session75882。选择文件夹或输入绝对路径→显式授权→浏览子目录→编辑保存回原文件→新建→撤销；授权不创建欢迎文件/目录，不导入demo。
 - WorkBuddy完成T010A/B；B通道300秒超时，原任务实际完成并回写记录，node20208自然退出后Codex才接手，没有重复派活或并发写入。

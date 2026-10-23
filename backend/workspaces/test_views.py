@@ -5,12 +5,10 @@ from __future__ import annotations
 import re
 import tempfile
 from pathlib import Path
-from unittest import mock
 
 from django.test import Client, TestCase
 
 from workspaces import views as workspace_views
-from workspaces.picker import PickerError
 
 
 class WorkspacePageTests(TestCase):
@@ -46,12 +44,15 @@ class WorkspacePageTests(TestCase):
         self.assertIn('no-store', response['Cache-Control'])
         self.assertEqual(self.snapshot(), before)
 
-    def test_get_never_opens_native_dialog(self) -> None:
-        with mock.patch.object(
-            workspace_views, 'pick_folder', side_effect=AssertionError('dialog opened on GET')
-        ):
-            response = self.client.get('/workspace/')
-        self.assertEqual(response.status_code, 200)
+    def test_get_page_uses_in_page_dialog_and_not_pick_action(self) -> None:
+        body = self.client.get('/workspace/').content.decode('utf-8')
+
+        self.assertIn('<dialog', body)
+        self.assertIn('id="folder-picker"', body)
+        self.assertIn('id="grant-path"', body)
+        self.assertIn('id="picker-path"', body)
+        self.assertNotIn('value="pick"', body)
+        self.assertNotIn('FolderBrowserDialog', body)
 
     def test_grant_existing_folder_creates_no_files_and_shows_full_path(self) -> None:
         (self.root / 'notes.txt').write_text('hello', encoding='utf-8')
@@ -364,42 +365,41 @@ class WorkspacePageTests(TestCase):
         self.assertEqual(response.status_code, 400)
         self.assertTrue((self.root / 'keep.txt').exists())
 
-    # -- native picker -------------------------------------------------
-    def test_pick_only_fills_path_and_does_not_grant(self) -> None:
-        chosen = str(self.root)
-        with mock.patch.object(workspace_views, 'pick_folder', return_value=chosen):
-            response = self.client.post('/workspace/', {'action': 'pick'})
+    # -- in-page picker ------------------------------------------------
+    def test_legacy_pick_action_returns_page_without_granting(self) -> None:
+        before = self.snapshot()
+
+        response = self.client.post('/workspace/', {'action': 'pick'})
 
         body = response.content.decode('utf-8')
         self.assertEqual(response.status_code, 200)
-        self.assertIn('已选择路径', body)
-        self.assertIn(chosen, body)
-        self.assertIn('未授权', body)
+        self.assertIn('页面内', body)
+        self.assertIn('id="grant-path"', body)
         self.assertNotIn(workspace_views.SESSION_KEY, self.client.session)
+        self.assertEqual(self.snapshot(), before)
 
-    def test_pick_cancel_keeps_existing_grant(self) -> None:
+    def test_legacy_pick_action_keeps_existing_grant_and_listing(self) -> None:
         (self.root / 'keep.md').write_text('keep', encoding='utf-8')
         self.grant()
-        with mock.patch.object(
-            workspace_views, 'pick_folder', side_effect=PickerError('picker_cancelled')
-        ):
-            response = self.client.post('/workspace/', {'action': 'pick'})
+        grant = dict(self.client.session[workspace_views.SESSION_KEY])
+
+        response = self.client.post('/workspace/', {'action': 'pick'})
 
         self.assertEqual(response.status_code, 200)
-        self.assertIn('已取消选择', response.content.decode('utf-8'))
-        self.assertIn(workspace_views.SESSION_KEY, self.client.session)
+        self.assertIn('页面内', response.content.decode('utf-8'))
         self.assertIn('keep.md', response.content.decode('utf-8'))
+        self.assertEqual(self.client.session[workspace_views.SESSION_KEY], grant)
 
-    def test_pick_failure_keeps_manual_path_input_available(self) -> None:
-        for code in ('picker_timeout', 'picker_unavailable', 'picker_failed'):
-            with mock.patch.object(
-                workspace_views, 'pick_folder', side_effect=PickerError(code)
-            ):
-                response = self.client.post('/workspace/', {'action': 'pick'})
-            body = response.content.decode('utf-8')
-            self.assertEqual(response.status_code, 400)
-            self.assertIn('手工输入', body)
-            self.assertIn('name="path"', body)
+    def test_page_dialog_is_accessible_and_keyboard_closeable(self) -> None:
+        body = self.client.get('/workspace/').content.decode('utf-8')
+
+        self.assertIn('aria-labelledby="picker-title"', body)
+        self.assertIn('id="picker-title"', body)
+        self.assertIn('for="picker-path"', body)
+        self.assertIn('id="picker-status"', body)
+        self.assertIn('id="picker-list"', body)
+        self.assertIn('id="picker-choose"', body)
+        self.assertIn('id="picker-up"', body)
 
     def test_save_keeps_leading_space_in_filename_and_never_edits_its_neighbor(self) -> None:
         target = self.root / ' note.md'
@@ -461,9 +461,86 @@ class WorkspacePageTests(TestCase):
         self.assertEqual(response.context['save_form']['path'].value(), relative)
         self.assertEqual(target.read_text(encoding='utf-8'), 'new')
 
-    def test_picked_replacement_folder_exposes_authorize_button(self) -> None:
+    def test_granted_page_exposes_replace_folder_dialog_button(self) -> None:
         self.grant()
-        with mock.patch.object(workspace_views, 'pick_folder', return_value=str(self.root)):
-            response = self.client.post('/workspace/', {'action': 'pick'})
 
-        self.assertContains(response, '<details open>')
+        body = self.client.get('/workspace/').content.decode('utf-8')
+
+        self.assertIn('更换文件夹', body)
+        self.assertIn('id="open-picker"', body)
+        self.assertIn('type="button"', body)
+        self.assertNotIn('value="pick"', body)
+
+
+class FolderBrowserEndpointTests(TestCase):
+    def setUp(self) -> None:
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self.base = Path(self.tmp.name)
+        self.root = self.base / 'project'
+        self.root.mkdir()
+        (self.root / 'src').mkdir()
+        (self.root / '文档').mkdir()
+        (self.root / 'note.txt').write_text('DO-NOT-READ', encoding='utf-8')
+        self.client = Client()
+
+    def snapshot(self) -> set[str]:
+        return {str(item.relative_to(self.base)) for item in self.base.rglob('*')}
+
+    def post(self, path: str):
+        return self.client.post('/workspace/folders/', {'path': path})
+
+    def test_empty_path_returns_drive_start(self) -> None:
+        response = self.post('')
+
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(data['path'], '')
+        self.assertEqual(data['parent'], '')
+        self.assertEqual(data['directories'], [])
+        self.assertFalse(data['truncated'])
+        self.assertTrue(data['drives'])
+        self.assertIn('no-store', response['Cache-Control'])
+
+    def test_browse_returns_metadata_without_session_or_disk_changes(self) -> None:
+        before = self.snapshot()
+
+        response = self.post(str(self.root))
+
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(data['path'], str(self.root))
+        self.assertEqual(data['parent'], str(self.base))
+        self.assertEqual([item['name'] for item in data['directories']], ['src', '文档'])
+        self.assertFalse(data['truncated'])
+        self.assertNotIn(workspace_views.SESSION_KEY, self.client.session)
+        self.assertEqual(self.snapshot(), before)
+        self.assertEqual((self.root / 'note.txt').read_text(encoding='utf-8'), 'DO-NOT-READ')
+
+    def test_bad_paths_return_json_400_and_keep_existing_grant(self) -> None:
+        self.client.post('/workspace/', {'action': 'grant', 'path': str(self.root)})
+        grant = dict(self.client.session[workspace_views.SESSION_KEY])
+        file_path = str(self.root / 'note.txt')
+
+        for path, code in (
+            ('relative/folder', 'invalid_path'),
+            ('\\\\server\\share', 'invalid_path'),
+            (str(self.root / '..'), 'invalid_path'),
+            (str(self.base / 'missing'), 'not_found'),
+            (file_path, 'not_a_directory'),
+        ):
+            response = self.post(path)
+            self.assertEqual(response.status_code, 400, path)
+            self.assertEqual(response.json(), {'error': code}, path)
+
+        self.assertEqual(self.client.session[workspace_views.SESSION_KEY], grant)
+
+    def test_get_is_rejected(self) -> None:
+        self.assertEqual(self.client.get('/workspace/folders/').status_code, 405)
+
+    def test_csrf_token_is_required(self) -> None:
+        csrf_client = Client(enforce_csrf_checks=True)
+
+        response = csrf_client.post('/workspace/folders/', {'path': str(self.root)})
+
+        self.assertEqual(response.status_code, 403)

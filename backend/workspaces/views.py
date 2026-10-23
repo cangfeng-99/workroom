@@ -14,12 +14,13 @@ from pathlib import Path
 from urllib.parse import quote
 
 from django.contrib import messages
+from django.http import JsonResponse
 from django.shortcuts import redirect, render
 from django.views.decorators.cache import never_cache
-from django.views.decorators.http import require_http_methods
+from django.views.decorators.http import require_http_methods, require_POST
 
 from workspaces.forms import GrantForm, NewFileForm, SaveForm
-from workspaces.picker import PickerError, pick_folder
+from workspaces.picker import PickerError, browse
 from workspaces.services import Workspace, WorkspaceError
 
 SESSION_KEY = 'workspace_grant_v2'
@@ -51,12 +52,10 @@ _ERROR_TEXT = {
     'read_failed': '读取失败，请稍后重试。',
 }
 
-_PICKER_TEXT = {
-    'picker_cancelled': '已取消选择，当前授权保持不变。',
-    'picker_timeout': '打开文件夹对话框超时（120 秒）。可以手工输入完整路径。',
-    'picker_unavailable': '无法启动系统文件夹对话框，请手工输入完整路径。',
-    'picker_failed': '系统文件夹对话框未能返回路径，请手工输入完整路径。',
-}
+_PICK_NOTICE = (
+    '请点击“选择文件夹…”打开页面内目录选择器；也可以直接输入完整路径后授权。'
+    '此操作没有授权任何文件夹。'
+)
 
 
 def _grant(request) -> dict[str, str] | None:
@@ -131,7 +130,9 @@ def workspace_page(request):
         if action == 'grant':
             return _grant_folder(request)
         if action == 'pick':
-            return _pick_folder(request)
+            # Legacy form target kept only for stale pages: answer immediately,
+            # never start an OS dialog, never grant or change the session.
+            return _render(request, grant=grant, notice=_PICK_NOTICE)
         if not grant:
             return _render(request, grant=None, error=NEED_GRANT, status=403)
         if action == 'revoke':
@@ -173,21 +174,15 @@ def _grant_folder(request):
     return redirect('workspaces:workspace')
 
 
-def _pick_folder(request):
-    grant = _grant(request)
+@never_cache
+@require_POST
+def folder_list(request):
+    """Return folder names/paths for the page dialog; never reads file contents."""
     try:
-        chosen = pick_folder()
+        data = browse(request.POST.get('path', ''))
     except PickerError as exc:
-        text = _PICKER_TEXT.get(exc.code, _PICKER_TEXT['picker_failed'])
-        if exc.code == 'picker_cancelled':
-            return _render(request, grant=grant, notice=text, grant_path='')
-        return _render(request, grant=grant, error=text, grant_path='', status=400)
-    return _render(
-        request,
-        grant=grant,
-        notice=f'已选择路径：{chosen}。确认无误后点击“授权此文件夹”。',
-        grant_path=chosen,
-    )
+        return JsonResponse({'error': exc.code}, status=400)
+    return JsonResponse(data)
 
 
 def _read_page(request, grant):

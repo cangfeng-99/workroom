@@ -1,43 +1,25 @@
-"""Windows native folder picker driven by one fixed PowerShell script.
+"""Read-only folder metadata for the in-page folder picker.
 
-No user input ever reaches the command line: the script text is a constant in
-this file and the only arguments are the fixed PowerShell executable and the
-switches below. The dialog runs in an STA thread inside a hidden PowerShell
-process so the web request does not spawn a console window.
-
-``pick_folder`` raises :class:`PickerError` with a stable code
-(``picker_cancelled``, ``picker_timeout``, ``picker_unavailable``,
-``picker_failed``). It is not a sandbox: the chosen path is only a string and
-must still pass ``Workspace.validate_root`` before it is authorized.
+The browser dialog can only list directory names and paths. Nothing here opens
+a file, writes to disk, or touches the session. Every accepted path is checked
+with :meth:`workspaces.services.Workspace.validate_root`, so the same rules
+that protect authorization (absolute local plain directories, no links/reparse
+on the path, no UNC/device roots) also apply to browsing.
 """
 
 from __future__ import annotations
 
 import os
-import shutil
-import subprocess
-import tempfile
-from pathlib import Path
+import stat
+from pathlib import Path, PureWindowsPath
 
-PICKER_TIMEOUT_SECONDS = 120
+from workspaces.services import Workspace, WorkspaceError
 
-# Fixed script: UTF-8 console output, one modal folder dialog, no extra console.
-_SCRIPT = """\
-[Console]::OutputEncoding = New-Object System.Text.UTF8Encoding($false)
-Add-Type -AssemblyName System.Windows.Forms | Out-Null
-$dialog = New-Object System.Windows.Forms.FolderBrowserDialog
-$dialog.Description = '选择要授权的工作文件夹'
-$dialog.ShowNewFolderButton = $false
-if ($dialog.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) {
-    [Console]::Out.WriteLine($dialog.SelectedPath)
-    exit 0
-}
-exit 3
-"""
+MAX_BROWSE_ENTRIES = 100
 
 
 class PickerError(Exception):
-    """Picker failure carrying a stable code for user-facing translation."""
+    """Picker failure carrying a stable code for the JSON response."""
 
     def __init__(self, code: str, message: str = '') -> None:
         super().__init__(message or code)
@@ -45,66 +27,112 @@ class PickerError(Exception):
         self.message = message or code
 
 
-def _powershell_path() -> str:
-    system_root = os.environ.get('SystemRoot', r'C:\Windows')
-    candidate = Path(system_root) / 'System32' / 'WindowsPowerShell' / 'v1.0' / 'powershell.exe'
-    if candidate.is_file():
-        return str(candidate)
-    found = shutil.which('powershell.exe')
-    if found:
-        return found
-    raise PickerError('picker_unavailable', 'powershell.exe was not found')
-
-
-def _run_command(args: list[str], timeout: float) -> subprocess.CompletedProcess:
-    """Run the fixed command hidden; separated so tests can replace it."""
-    creationflags = getattr(subprocess, 'CREATE_NO_WINDOW', 0)
-    return subprocess.run(
-        args,
-        capture_output=True,
-        timeout=timeout,
-        check=False,
-        creationflags=creationflags,
-    )
-
-
-def pick_folder() -> str:
-    """Open the native folder dialog and return the chosen absolute path."""
-    executable = _powershell_path()
-    descriptor, script_name = tempfile.mkstemp(suffix='.ps1')
-    with os.fdopen(descriptor, 'w', encoding='utf-8-sig', newline='\r\n') as script_file:
-        script_file.write(_SCRIPT)
-    try:
-        args = [
-            executable,
-            '-NoProfile',
-            '-NonInteractive',
-            '-STA',
-            '-ExecutionPolicy',
-            'Bypass',
-            '-File',
-            script_name,
-        ]
+def drives() -> list[dict[str, str]]:
+    """Return available local drive roots (or the platform root) as entries."""
+    lister = getattr(os, 'listdrives', None)
+    if lister is not None:
         try:
-            completed = _run_command(args, PICKER_TIMEOUT_SECONDS)
-        except subprocess.TimeoutExpired as exc:
-            raise PickerError('picker_timeout', 'folder dialog timed out') from exc
-        except OSError as exc:
-            raise PickerError('picker_unavailable', 'cannot start folder dialog') from exc
-    finally:
-        try:
-            os.unlink(script_name)
+            roots = [str(item) for item in lister()]
         except OSError:
-            pass
+            roots = []
+    elif os.name == 'nt':
+        roots = [
+            f'{letter}:\\'
+            for letter in 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+            if os.path.exists(f'{letter}:\\')
+        ]
+    else:
+        roots = [os.sep]
+    return [
+        {'name': root.rstrip('\\/') or root, 'path': root}
+        for root in roots
+    ]
 
-    if completed.returncode == 3:
-        raise PickerError('picker_cancelled', 'folder dialog was cancelled')
-    if completed.returncode != 0:
-        raise PickerError('picker_failed', 'folder dialog failed')
-    raw = completed.stdout or b''
-    if isinstance(raw, str):
-        raw = raw.encode('utf-8', 'replace')
-    chosen = raw.decode('utf-8', 'replace').strip()
-    if not chosen:
-        raise PickerError('picker_failed', 'folder dialog returned no path')
-    return chosen
+
+def _validated_path(raw: str) -> Path:
+    if not isinstance(raw, str) or len(raw) > 1024:
+        raise PickerError('invalid_path', 'path must be a short text value')
+    if any(ord(char) < 32 or ord(char) == 127 for char in raw):
+        raise PickerError('invalid_path', 'path contains a control character')
+
+    pure = PureWindowsPath(raw)
+    if (
+        not pure.is_absolute()
+        or not pure.drive
+        or pure.drive.startswith('\\\\')
+        or raw.startswith(('\\\\', '//'))
+        or any(part in {'.', '..'} for part in pure.parts)
+    ):
+        raise PickerError('invalid_path', 'path must be a local absolute directory')
+
+    target = Path(raw)
+    try:
+        workspace = Workspace(target)
+    except WorkspaceError as exc:
+        raise PickerError('invalid_path', str(exc)) from exc
+    try:
+        info = os.lstat(target)
+    except FileNotFoundError as exc:
+        raise PickerError('not_found', 'directory does not exist') from exc
+    except OSError as exc:
+        raise PickerError('unreadable', 'cannot inspect directory') from exc
+    if workspace._is_link_or_reparse(info):
+        raise PickerError('unsafe_path', 'links and reparse points are not browsable')
+    if not stat.S_ISDIR(info.st_mode):
+        raise PickerError('not_a_directory', 'path is not a directory')
+    try:
+        workspace.validate_root()
+    except WorkspaceError as exc:
+        raise PickerError('unsafe_path', str(exc)) from exc
+    return target
+
+
+def _parent_of(target: Path) -> str:
+    parent = target.parent
+    return '' if parent == target else str(parent)
+
+
+def browse(raw: str = '') -> dict[str, object]:
+    """Return ``path, parent, drives, directories, truncated`` for ``raw``.
+
+    An empty path returns the drive starting point without browsing anything.
+    Only plain, visible child directories are listed; files are never opened.
+    """
+    if raw == '':
+        return {
+            'path': '',
+            'parent': '',
+            'drives': drives(),
+            'directories': [],
+            'truncated': False,
+        }
+
+    target = _validated_path(raw)
+    workspace = Workspace(target)
+    directories: list[dict[str, str]] = []
+    try:
+        with os.scandir(target) as scan:
+            for entry in scan:
+                if entry.name.startswith('.'):
+                    continue
+                try:
+                    info = os.lstat(entry.path)
+                except OSError:
+                    continue
+                if not stat.S_ISDIR(info.st_mode):
+                    continue
+                if workspace._is_link_or_reparse(info) or workspace._is_hidden(info):
+                    continue
+                directories.append({'name': entry.name, 'path': str(Path(entry.path))})
+    except OSError as exc:
+        raise PickerError('unreadable', 'cannot list directory') from exc
+
+    directories.sort(key=lambda item: item['name'].casefold())
+    truncated = len(directories) > MAX_BROWSE_ENTRIES
+    return {
+        'path': str(target),
+        'parent': _parent_of(target),
+        'drives': drives(),
+        'directories': directories[:MAX_BROWSE_ENTRIES],
+        'truncated': truncated,
+    }
