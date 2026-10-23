@@ -1,6 +1,33 @@
 # 当前任务
 
-## 最新快照（T012：P2账号与项目技术验收通过，待用户体验）
+## 最新快照（T013：授权与项目关联状态修复已技术验收，待用户体验）
+- PLAN-r5 / RULES-r8，状态ACCEPTED_BY_CODEX_WAITING_USER_REVIEW；仍为P2验收修复，不推进P3。注册登录此前已获用户确认。
+- 用户截图：独立工作区D:\已授权，但“开发”项目尚未关联。已补当前授权目录/归属、项目关联位置与访问状态、列表显式POST“关联到此项目”；关联后从项目进入工作区。独立入口解释项目授权范围，不自动借用权限。
+- projects/workspaces共用grants.context_grant（用户、project_id、目录均匹配）；GET不自动关联，关联继续owner/CSRF与grant_id轮换；未改模型/迁移/依赖/文件边界，未改用户账号或“开发”项目数据。
+- WorkBuddy原任务自然结束，node32784已退出，报告落盘。通道300秒超时后未重复派发，确认结束后Codex接管；原报告初步163 passed/1 skipped。
+- Codex补正列表归属模板变量、失效项目授权提示、旧会话异常项目ID保护，并补回归。RED复现→focused31 passed/3 subtests passed；最终pytest165 passed/1 skipped/3 subtests passed，ruff/check/diff check通过。唯一skip仍为既有Windows文件symlink权限不足。
+- Chrome临时账号/目录8组实测通过：关联前后状态、POST关联、实际保存、同路径第二项目不共享、独立页范围说明、撤销/重授权、重登录需授权；脚本错误0，1280/390px截图检查且无横向溢出。临时测试账号与项目已精确清理。
+- 服务沿用Run-Backend.cmd exec session6238与自动重载；复核时worker13544，127.0.0.1:8000，无重复启动。验收详情tasks/acceptance/T013.md，报告tasks/reports/T013-browser.json与截图。
+- 下一步：用户刷新/projects/，在“开发”行点“关联到此项目”，确认“已授权，可读写”，再从该项目打开工作区编辑保存；P2整体仍等用户体验确认。
+
+## 上一快照（T013完成：授权与项目关联状态/入口已修复，待Codex复核）
+- PLAN-r5 / RULES-r8，基线7de132a，状态DONE_PENDING_CODEX_REVIEW；仅WorkBuddy写业务文件，未派agent/广播/联网/装依赖/起服务/迁移/commit，Codex两处文档改动保留。
+- 按tasks/specs/T013-workspace-status.md实现：`workspaces.grants`新增`same_path`与`context_grant`（用户+project_id+目录位置三重匹配，独立上下文只认空project_id），projects/workspaces两边复用，未新增权限。
+- 项目列表显示本次登录授权目录及归属（独立工作区/某项目）；项目行显示关联位置与文件访问状态（已授权，可读写/尚未授权）；未关联或同路径项目给显式POST“关联到此项目”，复用既有owner+CSRF接口并轮换grant_id；GET不写库不改grant。
+- 项目详情明确“已授权，可读写/尚未授权”，区分关联位置与访问权限；独立授权、其它项目授权、换路径旧授权均不误标；无可用授权时给项目工作区授权入口。
+- 独立工作区标注授权仅限独立工作区、不会自动关联；持有项目授权时说明属于该项目并引导从项目进入，仍拒绝写入（403）。
+- 验证：新增7项回归，RED 7 failed/22 passed EXIT=1 → focused GREEN 29 passed；全量pytest 163 passed/1 skipped；ruff、manage.py check、git diff --check均通过。业务约+212/-49行（测试另+106）。
+- 未做：未重启8000、未迁移、未读真实用户数据/凭据、未建真实账号；未做真实Chrome与390px实测，留Codex隔离账号/目录验收，保留用户admin与“开发”项目。
+- 下一步：Codex只读复核并按规格浏览器验收；用户刷新项目列表即可看到当前授权目录，点“关联到此项目”后进入项目工作区读写。P2仍待用户整体确认，不自动进入P3。
+
+## 上一快照（T013派发：修复授权与项目关联状态不清楚）
+- PLAN-r5 / RULES-r8，状态APPROVED，基线7de132a，开工git干净，无活跃WorkBuddy CLI任务。仍为P2修复，不推进P3。
+- 用户实测注册登录成功；本次截图中独立工作区D:\已授权，“开发”项目尚未关联。原因是权限与项目关联分开，但列表缺少当前授权提示与关联入口。
+- 按tasks/specs/T013-workspace-status.md：统一状态判断，项目列表显示当前目录和明确POST关联入口，详情标明本项目是否已获权限，独立工作区解释授权范围；不自动关联/放宽权限，不改用户数据。
+- 由WorkBuddy唯一写业务文件，Codex只读复核与浏览器隔离验收；现8000进程35736继续运行，不重复启动，不派其它agent。
+- 完成后交用户刷新体验，整体P2仍待用户确认。
+
+## 上一快照（T012：P2账号与项目技术验收通过，待用户体验）
 - PLAN-r5 / RULES-r8，状态ACCEPTED_BY_CODEX_WAITING_USER_REVIEW；用户授权的A+B完成，P1原流程保留并纳入登录门禁；不自动进入P3团队/任务/AI。
 - 用户体验进展：2026-10-23用户确认“注册登录成功”，注册/登录已通过用户验证；项目创建、文件夹关联及项目内读写仍待用户确认，整体P2状态不变。
 - 入口http://127.0.0.1:8000/projects/，首次到/accounts/signup/注册，注册/登录成功进本人项目列表；POST退出。无预置用户/管理员，真实账号由用户自行注册。

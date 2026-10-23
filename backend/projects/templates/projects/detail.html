@@ -6,30 +6,48 @@
 {% endblock %}
 {% block content %}
   <section class="card">
-    <h2>文件夹关联</h2>
+    <h2>文件夹关联与访问状态</h2>
     {% if project.workspace_path %}
       <p class="muted">已关联位置：<span class="dir">{{ project.workspace_path }}</span></p>
-      <p class="muted">关联用于保存文件夹位置，文件访问还需要本次登录的授权。重新登录后，请在项目工作区再次授权。</p>
     {% else %}
       <p class="empty">尚未关联文件夹。</p>
     {% endif %}
+    <p>
+      {% if authorized %}
+        <span class="status on">已授权，可读写</span>
+        <span class="muted">本次登录已授权本项目文件夹，可以在项目工作区读写文件。</span>
+      {% else %}
+        <span class="status off">尚未授权</span>
+        <span class="muted">{% if project.workspace_path %}位置已记录，但本次登录尚未授权该文件夹，现在不能读写文件。{% else %}关联文件夹并授权后才能读写文件。{% endif %}</span>
+      {% endif %}
+    </p>
+    <p class="muted">关联只保存文件夹位置；文件访问始终需要本次登录的单独授权，重新登录后需再次授权。</p>
+
     {% if grant_root %}
-      <p class="muted">当前已授权文件夹：<span class="dir">{{ grant_root }}</span></p>
+      <p class="muted">本次登录的文件夹授权记录：<span class="dir">{{ grant_root }}</span>{% if grant_project_id %}（已绑定项目工作区）{% else %}（独立工作区）{% endif %}</p>
       <form method="post" action="{% url 'projects:link_workspace' project.pk %}">
         {% csrf_token %}
         <div class="actions">
-          <button type="submit" class="primary">关联当前已授权文件夹</button>
+          <button type="submit" class="primary">{% if grant_differs %}用当前授权替换关联位置{% else %}关联当前已授权文件夹{% endif %}</button>
         </div>
-        <p class="muted" style="margin-top:8px;">关联会把当前授权绑定到本项目，并刷新授权版本；此前的旧页面保存会失效。</p>
+        {% if grant_differs %}
+          <p class="muted" style="margin-top:8px;">这会更换项目关联位置（当前为 <span class="dir">{{ project.workspace_path }}</span>）。关联后，请从本项目进入工作区，原工作区页面需刷新后才能继续操作。</p>
+        {% else %}
+          <p class="muted" style="margin-top:8px;">关联后，请从本项目进入工作区；原工作区页面需刷新后才能继续操作。</p>
+        {% endif %}
       </form>
     {% else %}
-      <p class="muted">当前没有已授权文件夹。请先到 <a href="{% url 'workspaces:workspace' %}">工作区</a> 选择并授权文件夹，再返回本页关联。</p>
-      <p><a class="button secondary" href="{% url 'workspaces:workspace' %}">选择并授权文件夹</a></p>
+      <p class="muted">当前没有可用的已授权文件夹。</p>
+      {% if project.workspace_path %}
+        <p><a class="button secondary" href="{% url 'workspaces:workspace' %}?project={{ project.pk }}">在项目工作区授权此文件夹</a></p>
+      {% else %}
+        <p><a class="button secondary" href="{% url 'workspaces:workspace' %}">选择并授权文件夹</a></p>
+      {% endif %}
     {% endif %}
   </section>
 
   <section class="card">
-    <h2>打开工作区</h2>
+    <h2>项目工作区</h2>
     {% if project.workspace_path %}
       <p><a class="button primary" href="{% url 'projects:open' project.pk %}">打开项目工作区</a></p>
       <p class="muted">打开后若显示未授权，请在该页面授权上方已关联的文件夹；不能改成其它目录。</p>

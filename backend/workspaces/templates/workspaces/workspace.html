@@ -79,8 +79,13 @@
       {% endif %}
       <p class="muted">页面只读写你授权的本机文件夹；内容不会上传，也不会被执行。</p>
       {% if granted %}
-        <p><span class="status on">已授权</span></p>
+        <p><span class="status on">已授权{% if project %}（本项目工作区）{% else %}（独立工作区）{% endif %}</span></p>
         <p class="muted">根目录：<span class="dir">{{ root_path }}</span></p>
+        {% if project %}
+          <p class="muted">此授权只属于项目“{{ project.name }}”的工作区；独立工作区和其它项目不能使用。</p>
+        {% else %}
+          <p class="muted">此授权只用于独立工作区，不会自动关联到任何项目；要在项目中使用，请到项目页点击“关联到此项目”。</p>
+        {% endif %}
         <p class="muted">当前目录：<span class="dir">{% if current_dir %}{{ current_dir }}{% else %}（根目录）{% endif %}</span></p>
         <form method="post" class="actions">
           {% csrf_token %}
@@ -89,6 +94,20 @@
         </form>
       {% else %}
         <p><span class="status off">未授权</span></p>
+        {% if other_grant %}
+          <p class="muted">
+            当前登录已授权文件夹 <span class="dir">{{ other_grant.root }}</span>。
+            {% if other_reason == 'project' %}
+              该授权属于{% if other_project %}项目“<a href="{% url 'projects:detail' other_project.pk %}">{{ other_project.name }}</a>”{% else %}某个项目{% endif %}的工作区，本页是独立工作区，不能使用它；请从该项目详情进入项目工作区。
+            {% elif other_reason == 'standalone' %}
+              该授权用于独立工作区，尚未关联到本项目；请返回 <a href="{% url 'projects:detail' project.pk %}">项目详情</a> 点击“关联当前已授权文件夹”。
+            {% elif other_reason == 'stale' %}
+              该授权与项目当前关联的位置不一致（关联可能已更换），请在下方重新授权项目关联的文件夹。
+            {% else %}
+              该授权属于{% if other_project %}另一个项目“<a href="{% url 'projects:detail' other_project.pk %}">{{ other_project.name }}</a>”{% else %}另一个上下文{% endif %}的工作区，本项目不能使用它。
+            {% endif %}
+          </p>
+        {% endif %}
         <p class="muted">授权一个已存在的本机文件夹后，才能浏览、读取、编辑和新建其中的文本文件。授权不会创建目录或欢迎文件。</p>
         {% if project %}
           <p class="muted">项目工作区只能授权项目已关联的文件夹：<span class="dir">{{ project.workspace_path }}</span>。如需更换，请返回项目详情重新关联。</p>

@@ -14,7 +14,6 @@ only accepts a grant whose ``project_id`` is empty.
 
 from __future__ import annotations
 
-import os
 import uuid
 from pathlib import Path
 from urllib.parse import urlencode
@@ -30,7 +29,9 @@ from workspaces.forms import GrantForm, NewFileForm, SaveForm
 from workspaces.grants import (
     LEGACY_SESSION_KEY,
     clear_grant,
+    context_grant,
     get_grant,
+    same_path,
     set_grant,
 )
 from workspaces.picker import PickerError, browse
@@ -83,8 +84,37 @@ def _parent(directory: str) -> str:
     return directory.rsplit('/', 1)[0] if '/' in directory else ''
 
 
-def _same_path(left: str, right: str) -> bool:
-    return os.path.normcase(os.path.normpath(left)) == os.path.normcase(os.path.normpath(right))
+def _owned_project(request, project_id: str):
+    """Resolve a grant's project id to an owned project, or ``None``."""
+    if (
+        not project_id.isascii() or not project_id.isdecimal()
+        or len(project_id) > 19 or int(project_id) <= 0
+    ):
+        return None
+    from projects.models import Project
+
+    return Project.objects.filter(pk=int(project_id), owner=request.user).first()
+
+
+def _other_grant(request, project):
+    """Describe the session grant when it does not apply to this context.
+
+    Returns ``(grant, project, reason)``; reason is ``project`` (independent
+    page holding a project grant), ``standalone``, ``stale`` or
+    ``other_project``. Nothing is changed here.
+    """
+    grant = get_grant(request)
+    if not grant:
+        return None, None, ''
+    if project is None:
+        if not grant['project_id']:
+            return None, None, ''
+        return grant, _owned_project(request, grant['project_id']), 'project'
+    if not grant['project_id']:
+        return grant, None, 'standalone'
+    if grant['project_id'] == str(project.pk):
+        return grant, project, 'stale'
+    return grant, _owned_project(request, grant['project_id']), 'other_project'
 
 
 def _resolve_project(request):
@@ -101,22 +131,6 @@ def _resolve_project(request):
         raise Http404('unknown project')
     request.workspace_project = project
     return project
-
-
-def _context_grant(request, project):
-    """Return only the grant that belongs to this exact context."""
-    grant = get_grant(request)
-    if not grant:
-        return None
-    if project is not None:
-        if grant['project_id'] != str(project.pk):
-            return None
-        if not project.workspace_path or not _same_path(grant['root'], project.workspace_path):
-            return None
-        return grant
-    if grant['project_id']:
-        return None
-    return grant
 
 
 def _workspace_url(project, *, directory: str | None = None, file: str | None = None) -> str:
@@ -150,6 +164,9 @@ def _render(
         entries = _entries(grant, current_dir)
     if not grant_path and project is not None:
         grant_path = project.workspace_path
+    other_grant, other_project, other_reason = (None, None, '')
+    if not grant:
+        other_grant, other_project, other_reason = _other_grant(request, project)
     return render(
         request,
         'workspaces/workspace.html',
@@ -167,6 +184,9 @@ def _render(
             'grant_form': GrantForm(initial={'path': grant_path}),
             'grant_path': grant_path,
             'project': project,
+            'other_grant': other_grant,
+            'other_project': other_project,
+            'other_reason': other_reason,
             'error': error,
             'notice': notice,
         },
@@ -179,7 +199,7 @@ def _render(
 @require_http_methods(['GET', 'POST'])
 def workspace_page(request):
     project = _resolve_project(request)
-    grant = _context_grant(request, project)
+    grant = context_grant(request, project)
 
     if request.method == 'POST':
         action = request.POST.get('action')
@@ -207,14 +227,14 @@ def _grant_folder(request, project=None):
     form = GrantForm(request.POST)
     if not form.is_valid():
         return _render(
-            request, grant=_context_grant(request, project), error=FORM_INVALID,
+            request, grant=context_grant(request, project), error=FORM_INVALID,
             grant_path=request.POST.get('path', ''), project=project, status=400,
         )
     path = form.cleaned_data['path']
     if project is not None:
         if not project.workspace_path:
             return _render(request, grant=None, error=PROJECT_NO_PATH, project=project, status=400)
-        if not _same_path(path, project.workspace_path):
+        if not same_path(path, project.workspace_path):
             return _render(
                 request, grant=None, error=PROJECT_PATH_MISMATCH, project=project, status=400
             )
@@ -222,12 +242,12 @@ def _grant_folder(request, project=None):
         Workspace(Path(path)).validate_root()
     except WorkspaceError as exc:
         return _render(
-            request, grant=_context_grant(request, project), error=_message(exc),
+            request, grant=context_grant(request, project), error=_message(exc),
             grant_path=path, project=project, status=400,
         )
     except (TypeError, ValueError):
         return _render(
-            request, grant=_context_grant(request, project),
+            request, grant=context_grant(request, project),
             error=_message(WorkspaceError('invalid_root')), grant_path=path,
             project=project, status=400,
         )

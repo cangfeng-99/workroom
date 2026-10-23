@@ -15,7 +15,7 @@ from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.cache import never_cache
 from django.views.decorators.http import require_http_methods, require_POST
-from workspaces.grants import get_grant, set_grant
+from workspaces.grants import context_grant, get_grant, same_path, set_grant
 from workspaces.services import Workspace, WorkspaceError
 
 from projects.forms import ProjectForm
@@ -35,11 +35,61 @@ def _grant_root(request) -> str | None:
     return grant['root'] if grant else None
 
 
+def _grant_project(request, grant: dict[str, str] | None) -> Project | None:
+    """Resolve the project a grant is bound to, scoped to the current user."""
+    project_id = grant['project_id'] if grant else ''
+    if (
+        not project_id.isascii() or not project_id.isdecimal()
+        or len(project_id) > 19 or int(project_id) <= 0
+    ):
+        return None
+    return Project.objects.filter(pk=int(project_id), owner=request.user).first()
+
+
+def _detail_context(request, project, grant, error: str = '') -> dict:
+    return {
+        'project': project,
+        'grant_root': grant['root'] if grant else '',
+        'grant_project_id': grant['project_id'] if grant else '',
+        'authorized': context_grant(request, project) is not None,
+        'grant_differs': bool(
+            grant
+            and project.workspace_path
+            and not same_path(grant['root'], project.workspace_path)
+        ),
+        'error': error,
+    }
+
+
 @never_cache
 @login_required
 def project_list(request):
-    projects = Project.objects.filter(owner=request.user)
-    return render(request, 'projects/list.html', {'projects': projects})
+    projects = list(Project.objects.filter(owner=request.user))
+    grant = get_grant(request)
+    grant_project = _grant_project(request, grant)
+    grant_usable = context_grant(request, grant_project) is not None
+    for project in projects:
+        project.authorized = context_grant(request, project) is not None
+        # Only offer the explicit POST association when it cannot silently move
+        # an existing project to a different folder.
+        project.can_link_grant = (
+            grant_usable
+            and not project.authorized
+            and (
+                not project.workspace_path
+                or same_path(project.workspace_path, grant['root'])
+            )
+        )
+    return render(
+        request,
+        'projects/list.html',
+        {
+            'projects': projects,
+            'grant': grant,
+            'grant_project': grant_project,
+            'grant_usable': grant_usable,
+        },
+    )
 
 
 @never_cache
@@ -85,15 +135,8 @@ def project_new(request):
 @login_required
 def project_detail(request, pk: int):
     project = _owned(request, pk)
-    grant = get_grant(request)
     return render(
-        request,
-        'projects/detail.html',
-        {
-            'project': project,
-            'grant_root': grant['root'] if grant else '',
-            'grant_project_id': grant['project_id'] if grant else '',
-        },
+        request, 'projects/detail.html', _detail_context(request, project, get_grant(request))
     )
 
 
@@ -107,7 +150,7 @@ def project_link_workspace(request, pk: int):
         return render(
             request,
             'projects/detail.html',
-            {'project': project, 'grant_root': '', 'error': NO_GRANT, 'grant_project_id': ''},
+            _detail_context(request, project, None, NO_GRANT),
             status=400,
         )
     try:
@@ -116,8 +159,7 @@ def project_link_workspace(request, pk: int):
         return render(
             request,
             'projects/detail.html',
-            {'project': project, 'grant_root': grant['root'], 'error': INVALID_ROOT,
-             'grant_project_id': grant['project_id']},
+            _detail_context(request, project, grant, INVALID_ROOT),
             status=400,
         )
     project.workspace_path = str(Path(grant['root']))

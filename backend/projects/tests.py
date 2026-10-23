@@ -322,6 +322,141 @@ class ProjectFlowTests(TestCase):
         )
         self.assertNotIn(grants.SESSION_KEY, self.client.session)
 
+    # -- T013: authorization vs association status ----------------------
+    def test_list_shows_current_grant_and_offers_explicit_link(self) -> None:
+        project = self.create_project('未关联项目')
+        self.grant_workspace(self.root)
+        grant_id = self.client.session[grants.SESSION_KEY]['grant_id']
+
+        html = self.client.get('/projects/').content.decode('utf-8')
+
+        self.assertIn(str(self.root), html)
+        self.assertIn('独立工作区', html)
+        self.assertIn('尚未授权', html)
+        self.assertIn(f'/projects/{project.pk}/workspace/', html)
+        self.assertIn('关联到此项目', html)
+        project.refresh_from_db()
+        self.assertEqual(project.workspace_path, '')
+        self.assertEqual(self.client.session[grants.SESSION_KEY]['project_id'], '')
+        self.assertEqual(self.client.session[grants.SESSION_KEY]['grant_id'], grant_id)
+
+    def test_explicit_link_from_grant_makes_project_authorized_everywhere(self) -> None:
+        project = self.create_project('待关联项目')
+        self.grant_workspace(self.root)
+
+        response = self.client.post(f'/projects/{project.pk}/workspace/', follow=True)
+
+        self.assertRedirects(response, f'/projects/{project.pk}/')
+        self.assertContains(response, '已授权，可读写')
+        project.refresh_from_db()
+        self.assertEqual(project.workspace_path, str(self.root))
+        self.assertContains(self.client.get('/projects/'), '已授权，可读写')
+        page = self.client.get(f'/workspace/?project={project.pk}')
+        self.assertContains(page, '已授权')
+        self.assertTrue(page.context['granted'])
+
+    def test_standalone_grant_does_not_authorize_same_path_project(self) -> None:
+        project = self.create_project('同路径项目', path=str(self.root))
+        self.grant_workspace(self.root)
+        grant_id = self.client.session[grants.SESSION_KEY]['grant_id']
+
+        detail = self.client.get(f'/projects/{project.pk}/')
+        listing = self.client.get('/projects/')
+
+        self.assertNotContains(detail, '已授权，可读写')
+        self.assertContains(detail, '尚未授权')
+        self.assertNotContains(listing, '已授权，可读写')
+        self.assertContains(listing, '尚未授权')
+        self.assertEqual(self.client.session[grants.SESSION_KEY]['grant_id'], grant_id)
+        self.assertEqual(self.client.session[grants.SESSION_KEY]['project_id'], '')
+        project.refresh_from_db()
+        self.assertEqual(project.workspace_path, str(self.root))
+
+    def test_detail_and_list_only_mark_matching_project_grant_authorized(self) -> None:
+        project = self.create_project('甲项目', path=str(self.root))
+        other = self.create_project('乙项目', path=str(self.other_root))
+        self.grant_workspace(self.root, project)
+
+        self.assertContains(self.client.get(f'/projects/{project.pk}/'), '已授权，可读写')
+        listing = self.client.get('/projects/')
+        self.assertContains(listing, '已授权，可读写')
+        self.assertContains(listing, '此授权属于项目')
+        self.assertNotContains(listing, '此授权用于独立工作区')
+        other_detail = self.client.get(f'/projects/{other.pk}/')
+        self.assertNotContains(other_detail, '已授权，可读写')
+        self.assertContains(other_detail, '尚未授权')
+
+        project.workspace_path = str(self.other_root)
+        project.save(update_fields=['workspace_path'])
+        changed = self.client.get(f'/projects/{project.pk}/')
+        self.assertNotContains(changed, '已授权，可读写')
+        self.assertContains(changed, '尚未授权')
+        changed_list = self.client.get('/projects/')
+        self.assertNotContains(changed_list, '已授权，可读写')
+        self.assertContains(changed_list, '已不再生效')
+
+    def test_unavailable_grant_project_is_not_presented_as_usable(self) -> None:
+        project = self.create_project(path=str(self.root))
+        self.grant_workspace(self.root, project)
+        project.delete()
+
+        listing = self.client.get('/projects/')
+
+        self.assertContains(listing, '授权对应的项目已不可用')
+        self.assertNotContains(listing, '此授权用于独立工作区')
+        self.assertNotContains(listing, '已授权，可读写')
+
+    def test_malformed_project_in_old_grant_does_not_break_status_pages(self) -> None:
+        self.grant_workspace(self.root)
+        for project_id in ('9' * 5000, '²', '-1'):
+            with self.subTest(project_id_length=len(project_id)):
+                session = self.client.session
+                session[grants.SESSION_KEY]['project_id'] = project_id
+                session.save()
+                self.assertEqual(self.client.get('/projects/').status_code, 200)
+                page = self.client.get('/workspace/')
+                self.assertEqual(page.status_code, 200)
+                self.assertFalse(page.context['granted'])
+
+    def test_independent_workspace_explains_project_grant_and_stays_unauthorized(self) -> None:
+        project = self.create_project('项目上下文', path=str(self.root))
+        self.grant_workspace(self.root, project)
+        grant_id = self.client.session[grants.SESSION_KEY]['grant_id']
+
+        page = self.client.get('/workspace/')
+        html = page.content.decode('utf-8')
+
+        self.assertEqual(page.status_code, 200)
+        self.assertFalse(page.context['granted'])
+        self.assertIn('独立工作区', html)
+        self.assertIn('项目上下文', html)
+        self.assertIn(f'/projects/{project.pk}/', html)
+        self.assertEqual(self.client.session[grants.SESSION_KEY]['grant_id'], grant_id)
+        denied = self.client.post('/workspace/', {'action': 'create', 'name': 'x.txt', 'content': 'x'})
+        self.assertEqual(denied.status_code, 403)
+        self.assertFalse((self.root / 'x.txt').exists())
+
+    def test_independent_authorized_page_says_not_linked_to_projects(self) -> None:
+        self.grant_workspace(self.root)
+
+        page = self.client.get('/workspace/')
+        html = page.content.decode('utf-8')
+
+        self.assertTrue(page.context['granted'])
+        self.assertIn('独立工作区', html)
+        self.assertIn('不会自动关联', html)
+
+    def test_project_workspace_explains_standalone_grant_is_not_linked(self) -> None:
+        project = self.create_project(path=str(self.root))
+        self.grant_workspace(self.root)
+
+        page = self.client.get(f'/workspace/?project={project.pk}')
+        html = page.content.decode('utf-8')
+
+        self.assertFalse(page.context['granted'])
+        self.assertIn('独立工作区', html)
+        self.assertIn('尚未关联到本项目', html)
+
     def test_relogin_keeps_project_but_requires_new_authorization(self) -> None:
         self.user.set_password('Str0ng-Pass!234')
         self.user.save(update_fields=['password'])

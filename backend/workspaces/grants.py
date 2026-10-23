@@ -6,6 +6,8 @@ it. Anonymous sessions and grants without a matching ``user_id`` are ignored.
 
 from __future__ import annotations
 
+import os
+
 SESSION_KEY = 'workspace_grant_v2'
 LEGACY_SESSION_KEY = 'workspace_grant_root'
 
@@ -50,3 +52,28 @@ def set_grant(request, root: str, grant_id: str, project_id: str = '') -> None:
 def clear_grant(request) -> None:
     request.session.pop(SESSION_KEY, None)
     request.session.pop(LEGACY_SESSION_KEY, None)
+
+
+def same_path(left: str, right: str) -> bool:
+    """Compare two local paths the same way for every page and view."""
+    return os.path.normcase(os.path.normpath(left)) == os.path.normcase(os.path.normpath(right))
+
+
+def context_grant(request, project=None) -> dict[str, str] | None:
+    """Return only the grant that belongs to this exact context.
+
+    ``project is None`` is the independent workspace: only a grant with an
+    empty ``project_id`` counts. A project context additionally requires the
+    grant to be bound to that project and rooted at its remembered folder, so
+    a standalone grant or another folder's grant can never mark it authorized.
+    """
+    grant = get_grant(request)
+    if not grant:
+        return None
+    if project is None:
+        return None if grant['project_id'] else grant
+    if grant['project_id'] != str(project.pk):
+        return None
+    if not project.workspace_path or not same_path(grant['root'], project.workspace_path):
+        return None
+    return grant
