@@ -43,3 +43,4 @@ class HomePageContractTests(SimpleTestCase):
         self.assertIn('AI协作工作台', html)
         self.assertIn('Django服务已启动', html)
         self.assertIn('href="/api/health/"', html)
+        self.assertIn('href="/workspace/"', html)

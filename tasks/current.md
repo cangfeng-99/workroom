@@ -1,15 +1,27 @@
 # 当前任务
 
-## 最新快照（T008：Django骨架已验收，可直接启动）
-- 版本：PLAN-r2（整体业务路线仍为草案）/ RULES-r4。用户已单独授权并完成本轮Django骨架。
-- 状态：ACCEPTED_BY_CODEX。无活跃执行任务；本轮测试服务已停止。
-- 项目：backend/manage.py、config、core；启动入口Run-Backend.cmd，先本机开发库迁移再启动127.0.0.1:8000。说明见README.md。
-- 已有：首页与GET /api/health/，仅服务存活检查；本地中文/上海时区、标准Django内置auth/admin骨架。未创建管理员或业务模型。
-- 验证：pytest 4 passed、ruff backend/tools通过、Django check无问题；真实启动脚本与Chrome浏览器通过；GET首页/health=200、POST=405、非法Host=400，进程树清理后端口已关闭。
-- 数据：.tools/dev.sqlite3已执行18项内置迁移，本机key与数据库均被Git忽略；MySQL真实登录未验证。用户运行产品时自行连接AI，无需提供key给开发工具。
-- 证据：tasks/logs/T008A.log、T008B.log，tasks/reports/T008A.json、T008B.json、T008-live.json、django-bootstrap.png。
-- 下一项候选T009（待确认规格）：按既定P0/P1路线，收敛本地执行边界与工作区授权读写小规格，再实现并验证越界拒绝。不自动进入注册/项目/任务/AI等后续业务阶段。
-- 用户投递简历后：双击Run-Backend，查看README，继续本任务上下文；不再安装环境或重建Django骨架。
+## 最新快照（T009：本机工作区技术验收通过，待用户体验）
+- 版本PLAN-r2 / RULES-r5。状态ACCEPTED_BY_CODEX_WAITING_USER_REVIEW；用户授权“开始第一步”的固定工作区闭环已完成，不自动推进下一业务阶段。
+- 访问http://127.0.0.1:8000/workspace/；服务当前运行于Codex exec session 75882，通过Run-Backend.cmd启动，仅127.0.0.1。再次启动前先确认8000端口，不重复启动。
+- 功能：授权固定.tools/workspaces/demo→列出/读取UTF8文本→新建不覆盖→撤销；浏览器会话隔离，保留CSRF/no-store/自动转义。最大64KiB，只支持根内普通.txt/.md，不支持任意目录/命令执行。
+- 验证：pytest 69 passed/1 skipped；跳过真实文件symlink因WinError1314。真实junction（含父目录）、硬链接、模拟symlink拒绝、越界/覆盖/编码/大小测试通过；ruff backend/tools与Django check通过。
+- 浏览器：真实授权→读取→创建→读取→重名拒绝→越界/CSRF拒绝→跨浏览器拒绝→撤销拒绝均通过；桌面和390px移动页面无横向溢出。示例文件留在demo，测试会话已撤销。
+- WorkBuddy完成T009A/B；B在最终回报阶段触发300秒通道超时，报告与源码已落盘，原node进程39980已结束后由Codex复核。未重复派活。
+- Codex补正：文件名保留原输入并拒绝尾部空格；创建成功提示只显示一次。先补2项失败回归再修复，测试全通过（除明确权限跳过项）。
+- 边界：不是OS沙箱，未防本机恶意进程并发替换；未完成成员账号、任意文件夹选择或AI执行器。
+- 证据：tasks/acceptance/T009.md，tasks/reports/T009-browser.json和T009-{desktop,mobile}.png；服务代码backend/workspaces/。
+- 下一步：用户体验此页并反馈，确认本步后再收敛后续规格；不自动进入注册/项目/团队/Agent阶段。
+## 上一快照（T009B派发：会话授权与页面）
+- 版本PLAN-r2 / RULES-r5，用户授权T009闭环。T009A已完成文件服务：54 passed/1 skipped；跳过的是本机无权限创建文件符号链接，真实硬链接与目录junction已实测，不能称该跳过用例已通过。
+- 当前任务T009B：APPROVED。WorkBuddy接入Django会话与表单页面，补父目录junction拒绝及符号链接属性的独立分支验证；Codex后续浏览器验收。
+- 测试目录仅.tools/workspaces/demo；授权前不初始化，GET不写文件，POST保留CSRF；其它浏览器无授权、撤销后拒绝文件访问。
+- 范围、状态仍以tasks/specs/T009-workspace.md为准；T009完成交用户体验，不自动进入账号/项目/Agent等阶段。
+## 上一快照（T009派发：本地工作区最小闭环）
+- 版本：PLAN-r2 / RULES-r5；基线53220eb。用户“开始第一步”明确授权本项，不等于批准所有业务阶段。
+- 当前任务T009A：APPROVED。WorkBuddy实现可信根目录文件服务与单测；随后T009B接Django会话授权、页面和验收。
+- 规格tasks/specs/T009-workspace.md。固定项目.tools/workspaces/demo演示目录；不读取其它用户文件，不接AI/命令执行，不新增依赖。
+- 基线工作区干净，派活前确认无其它任务执行；只有WorkBuddy写实现，Codex复核。
+- 骨架已验收，T008证据沿用。完成本阶段后给用户体验，不自动跨到账号/项目/团队阶段。
 ## 上一快照（T008A：后端骨架已完成，待Codex验收）
 - 版本：PLAN-r2 / RULES-r4；授权来源为用户直接要求开Django项目（T008A APPROVED）。
 - 状态：DONE_PENDING_CODEX_REVIEW；仅 WorkBuddy 单执行者，未派 agent、未联网、未装依赖。
@@ -142,3 +154,9 @@
 - 独立pytest4项、ruff backend/tools、Django check均通过；测试服务器进程树已停止且8000关闭。
 - T008B曾把.cmd误传给Python lint产生语法诊断；.cmd以实际Windows启动验证，Python源以ruff检查，未降低规则。
 - 未验证手动Ctrl+C交互；没有MySQL、API模型、业务流程或安装包验收。
+
+
+## T009 Codex验收收口
+- 审阅服务、路径边界、会话校验、CSRF与模板转义；补正2个HTTP/反馈缺口并验证。
+- 浏览器第一轮因测试选择器同时匹配region和textbox而中断；更正为textbox角色后全流程通过，未降低断言。失败记录保留T009-browser-attempt1.json。
+- 当前服务保留运行供用户体验；服务器属于exec session75882，后续停止通过该会话或核对任务进程树，不杀其它服务。

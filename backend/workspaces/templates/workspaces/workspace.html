@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>本机演示工作区</title>
+  <style>
+    :root { color-scheme: light; }
+    * { box-sizing: border-box; }
+    body { font-family: system-ui, sans-serif; margin: 0; background: #f6f7f9; color: #1f2328; line-height: 1.6; }
+    main { max-width: 960px; margin: 32px auto; padding: 0 16px 48px; }
+    header { margin-bottom: 20px; }
+    h1 { font-size: 1.5rem; margin: 0 0 8px; }
+    h2 { font-size: 1.1rem; margin: 0 0 12px; }
+    .muted { color: #57606a; font-size: 0.92rem; }
+    .card { background: #fff; border: 1px solid #d8dee4; border-radius: 10px; padding: 20px; }
+    .status { display: inline-block; padding: 2px 10px; border-radius: 999px; font-size: 0.85rem; font-weight: 600; }
+    .status.on { background: #dafbe1; color: #1a7f37; }
+    .status.off { background: #fff1e5; color: #9a3412; }
+    .dir { font-family: ui-monospace, Consolas, monospace; background: #f0f3f6; padding: 2px 6px; border-radius: 4px; word-break: break-all; }
+    .actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px; }
+    button { font: inherit; padding: 8px 16px; border-radius: 8px; border: 1px solid transparent; cursor: pointer; }
+    button.primary { background: #1f6feb; color: #fff; }
+    button.secondary { background: #fff; border-color: #d0d7de; color: #1f2328; }
+    button.danger { background: #fff; border-color: #cf222e; color: #cf222e; }
+    button:hover { filter: brightness(0.96); }
+    :focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visible { outline: 3px solid #0969da; outline-offset: 2px; }
+    .alert { margin: 16px 0 0; padding: 10px 14px; border-radius: 8px; }
+    .alert.error { background: #ffebe9; border: 1px solid #ffcecb; color: #82071e; }
+    .alert.notice { background: #ddf4ff; border: 1px solid #b6e3ff; color: #0a3069; }
+    .grid { display: grid; gap: 16px; margin-top: 20px; }
+    @media (min-width: 760px) { .grid { grid-template-columns: 260px 1fr; align-items: start; } }
+    ul.files { list-style: none; margin: 0; padding: 0; }
+    ul.files li + li { margin-top: 4px; }
+    ul.files a { display: block; padding: 6px 8px; border-radius: 6px; color: #0969da; text-decoration: none; word-break: break-all; }
+    ul.files a:hover { background: #f0f6ff; }
+    ul.files a[aria-current="true"] { background: #e7f0ff; font-weight: 600; }
+    pre.content { margin: 0; padding: 12px; background: #f6f8fa; border: 1px solid #d8dee4; border-radius: 8px; white-space: pre-wrap; word-break: break-word; min-height: 120px; }
+    form.newfile { margin-top: 20px; }
+    .field { margin-bottom: 14px; }
+    label { display: block; font-weight: 600; margin-bottom: 6px; }
+    input[type="text"], textarea { width: 100%; font: inherit; padding: 8px 10px; border: 1px solid #d0d7de; border-radius: 8px; background: #fff; }
+    textarea { resize: vertical; }
+    .empty { color: #57606a; padding: 6px 0; }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <h1>本机演示工作区</h1>
+      <p class="muted">文件只保存在本机项目目录中，不会上传或执行。</p>
+      {% if granted %}
+        <p><span class="status on">已授权</span></p>
+      {% else %}
+        <p><span class="status off">未授权</span></p>
+      {% endif %}
+      <p class="muted">固定目录：<span class="dir">{{ root_display }}</span></p>
+
+      {% if granted %}
+        <form method="post" class="actions">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="revoke">
+          <button type="submit" class="danger">撤销授权</button>
+        </form>
+      {% else %}
+        <p class="muted">授权后可以列出、读取并创建 .txt、.md 文本文件；撤销后文件操作会被拒绝。</p>
+        <form method="post" class="actions">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="grant">
+          <button type="submit" class="primary">授权使用演示工作区</button>
+        </form>
+      {% endif %}
+
+      {% if error %}<p class="alert error" role="alert">{{ error }}</p>{% endif %}
+      {% if notice %}<p class="alert notice" role="status">{{ notice }}</p>{% endif %}
+      {% for message in messages %}<p class="alert notice" role="status">{{ message }}</p>{% endfor %}
+    </header>
+
+    {% if granted %}
+      <div class="grid">
+        <section class="card" aria-labelledby="files-title">
+          <h2 id="files-title">文件列表</h2>
+          {% if files %}
+            <ul class="files">
+              {% for name in files %}
+                <li><a href="?file={{ name|urlencode }}"{% if name == selected %} aria-current="true"{% endif %}>{{ name }}</a></li>
+              {% endfor %}
+            </ul>
+          {% else %}
+            <p class="empty">还没有文本文件，可以在右侧创建第一个。</p>
+          {% endif %}
+        </section>
+
+        <section class="card" aria-labelledby="read-title">
+          <h2 id="read-title">文件内容</h2>
+          {% if selected %}
+            <p class="muted">正在查看：<strong>{{ selected }}</strong></p>
+            <pre class="content">{{ content }}</pre>
+          {% else %}
+            <p class="empty">从左侧选择一个文件即可读取。</p>
+          {% endif %}
+        </section>
+      </div>
+
+      <section class="card" aria-labelledby="create-title" style="margin-top: 16px;">
+        <h2 id="create-title">创建文本文件</h2>
+        <form method="post" class="newfile">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="create">
+          <div class="field">
+            <label for="{{ form.name.id_for_label }}">{{ form.name.label }}</label>
+            {{ form.name }}
+            <p class="muted">支持 .txt 和 .md，不能覆盖已有文件。</p>
+          </div>
+          <div class="field">
+            <label for="{{ form.content.id_for_label }}">{{ form.content.label }}</label>
+            {{ form.content }}
+            <p class="muted">内容可以为空；最多 64 KiB。</p>
+          </div>
+          <button type="submit" class="primary">创建文件</button>
+        </form>
+      </section>
+    {% endif %}
+
+    <p class="muted" style="margin-top: 24px;"><a href="/">返回首页</a></p>
+  </main>
+</body>
+</html>

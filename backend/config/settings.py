@@ -53,6 +53,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'core',
+    'workspaces',
 ]
 
 MIDDLEWARE = [
@@ -136,3 +137,7 @@ STATIC_URL = 'static/'
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# Local demo workspace. The root is a server-side trusted setting and must
+# never be derived from HTTP input.
+WORKSPACE_ROOT = PROJECT_ROOT / '.tools' / 'workspaces' / 'demo'
