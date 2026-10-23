@@ -1,11 +1,12 @@
 {% extends 'projects/base.html' %}
-{% block title %}新建项目{% endblock %}
+{% block title %}新建项目 · AI协作工作台{% endblock %}
 {% block heading %}
+  <p class="eyebrow">工作台 / 项目</p>
   <h1>新建项目</h1>
-  <p class="muted">项目只保存名称、说明与文件夹位置，不会复制或上传文件。</p>
+  <p class="page-sub">项目只保存名称、说明与文件夹位置，不会复制或上传文件。</p>
 {% endblock %}
 {% block content %}
-  <section class="card">
+  <section class="card form-card">
     <form method="post" action="{% url 'projects:new' %}">
       {% csrf_token %}
       <div class="field">
@@ -20,7 +21,7 @@
       </div>
       {% if grant_root %}
         <div class="field">
-          <label><input type="checkbox" name="link_grant"{% if linked %} checked{% endif %}> 关联当前已授权文件夹</label>
+          <label class="check-line"><input type="checkbox" name="link_grant"{% if linked %} checked{% endif %}> 关联当前已授权文件夹</label>
           <p class="muted">将关联：<span class="dir">{{ grant_root }}</span></p>
         </div>
       {% else %}

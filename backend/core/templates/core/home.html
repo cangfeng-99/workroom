@@ -1,36 +1,50 @@
-<!DOCTYPE html>
-<html lang="zh-CN">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>AI协作工作台</title>
-  <style>
-    body { font-family: system-ui, sans-serif; margin: 0; background: #f6f7f9; color: #1f2328; }
-    main { max-width: 640px; margin: 12vh auto; padding: 32px; background: #fff; border-radius: 12px; }
-    h1 { font-size: 1.6rem; margin-top: 0; }
-    .ok { color: #1a7f37; font-weight: 600; }
-    p { line-height: 1.7; }
-  </style>
-</head>
-<body>
-  <main>
+{% extends "core/base.html" %}
+{% block title %}AI协作工作台{% endblock %}
+{% block body_class %}page-home{% endblock %}
+{% block heading %}
+  <p class="eyebrow">工作台 / 首页</p>
+  <h1>AI协作工作台</h1>
+  <p class="page-sub">统一项目、文件工作区与协作上下文；当前为本机开发版。</p>
+{% endblock %}
+{% block content %}
+  {% if not user.is_authenticated %}
+    <p class="eyebrow">AI 协作工作台</p>
     <h1>AI协作工作台</h1>
-    <p class="ok">Django服务已启动</p>
-    <p>当前提供首页、健康检查与本机文件夹工作区。</p>
-    <p>
-      <a href="/projects/">我的项目</a> ·
-      <a href="/workspace/">进入本机文件夹工作区</a>
-    </p>
-    <p><a href="/api/health/">健康接口 /api/health/</a></p>
-    {% if user.is_authenticated %}
-      <p>已登录：<strong>{{ user.username }}</strong></p>
-      <form method="post" action="{% url 'accounts:logout' %}">
-        {% csrf_token %}
-        <button type="submit">退出登录</button>
-      </form>
-    {% else %}
-      <p><a href="{% url 'accounts:login' %}">登录</a> · <a href="{% url 'accounts:signup' %}">注册</a></p>
-    {% endif %}
-  </main>
-</body>
-</html>
+    <p class="lede">统一项目、文件工作区与协作上下文。当前提供首页、健康检查与本机文件夹工作区。</p>
+  {% endif %}
+
+  <section class="card home-hero">
+    <div class="card-head">
+      <div>
+        <h2>服务状态</h2>
+        <p>本机 Django 服务已启动，账号、项目与文件授权均使用真实数据。</p>
+      </div>
+      <span class="status on">Django服务已启动</span>
+    </div>
+    <p class="muted">页面只读写你明确授权并保存在本机文件夹中的文本文件，不会上传或执行文件内容。</p>
+    <div class="actions">
+      {% if user.is_authenticated %}
+        <a class="button primary" href="{% url 'projects:list' %}">我的项目</a>
+        <a class="button secondary" href="{% url 'workspaces:workspace' %}">进入本机文件夹工作区</a>
+      {% else %}
+        <a class="button primary" href="{% url 'accounts:signup' %}">注册账号</a>
+        <a class="button secondary" href="{% url 'accounts:login' %}">登录</a>
+      {% endif %}
+    </div>
+  </section>
+
+  <div class="home-grid">
+    <section class="card">
+      <h2>我的项目</h2>
+      <p class="muted">创建项目、记录文件夹位置，并在项目工作区中读写已授权的文件。</p>
+      <p class="card-link"><a href="{% url 'projects:list' %}">打开项目列表</a></p>
+    </section>
+    <section class="card">
+      <h2>文件工作区</h2>
+      <p class="muted">授权一个已存在的本机文件夹，浏览子目录、编辑保存或新建文本文件。</p>
+      <p class="card-link"><a href="{% url 'workspaces:workspace' %}">进入工作区</a></p>
+    </section>
+  </div>
+
+  <p class="footnote">健康检查：<a href="/api/health/">/api/health/</a>（只读）</p>
+{% endblock %}

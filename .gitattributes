@@ -3,3 +3,4 @@
 # Preserve pinned upstream references byte-for-byte, including license text.
 experts/sources/** -text
 docs/previews/assets/vendor/** -text
+backend/core/static/core/vendor/** -text

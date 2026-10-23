@@ -1,6 +1,22 @@
 # 当前任务
 
-## 最新快照（T014：开源调研与交互样稿已完成，待视觉反馈）
+## 最新快照（T015：真实页面统一界面已技术验收，待用户体验）
+- PLAN-r6 / RULES-r9，状态ACCEPTED_BY_CODEX_WAITING_USER_REVIEW。用户“继续”授权的现有页面迁移完成，P2整体仍待用户确认，P3未开始。
+- 首页、登录/注册、项目列表/创建/详情、真实文件工作区统一core/base与本地app.css/js；深色导航、统一卡片/表单/提示，Tabler1.7.0+Motion14.6.0固定本地文件及许可证/哈希。新增本人项目名称/说明搜索、授权状态筛选、重置及减弱动效。数据来自现有Django后端，未使用样稿演示数据。
+- 后端Python、模型/迁移/依赖和目录协议无改动；文件夹picker脚本与基线逐字一致。保留POST关联/登出、owner/CSRF、独立与项目授权隔离、冲突保留编辑、原位置保存和新建规则，未修改用户admin/开发项目。
+- WorkBuddy T015通道300秒超时，模板/样式已落盘但未取得最终报告。Codex核对唯一node7624任务树（parent7332，16:04:12创建，命令含唯一任务T015）并停止，确认后接手，未重复派发或并发写入。Codex补齐说明搜索、计数播报和授权文案，以下检查均由Codex实跑。
+- 最终pytest165 passed/1 skipped/3 subtests passed（26.91秒）；原skip为Windows文件symlink权限限制。ruff backend/tools、Django check、Node语法通过。Chrome真实业务9组、描述/状态/重置/转义专项通过，反转筛选条件的浏览器内存变异被断言捕获，源码未改；390/768/1440无横向溢出，截图视觉检查通过，脚本异常/资源失败均0。
+- 浏览器前两轮失败记录保留：第一轮选择器错误地匹配两个不同状态徽标；第二轮重开picker后未等初始目录加载便填路径。限定徽标语义并等待列表就绪后全流程通过，未降低产品断言。外部网络全阻断，已知Kaspersky注入域单列，未知域仍使检查失败；不改安全软件。
+- 临时QA账号与其项目已精确清理；证据tasks/acceptance/T015.md、tasks/reports/T015-browser.json、T015-filter.json与截图。服务exec session75829、复核PID24500，仅127.0.0.1:8000；本轮启动时原8000未监听，无重置/迁移。真实入口http://127.0.0.1:8000/projects/，8030仍是独立旧样稿地址。
+- 下一步：用户在真实项目页体验新界面、关联与项目内读写；确认当前阶段后再准备P3团队邀请规格，不自动跨阶段。
+
+## 上一快照（T015：将样稿风格接入真实业务页面）
+- PLAN-r6 / RULES-r9，状态APPROVED，基线fabe03f，开工git干净，无活跃WB任务。用户连续“继续”授权本轮已有页面统一UI，不进入P3。
+- 规格tasks/specs/T015-real-ui.md：共享core/base+本地app.css/js与Tabler/Motion；迁移账号/项目/首页，再迁移实际workspace，保留所有真实表单/CSRF/owner/授权和文件边界，不注入样稿数据。
+- WorkBuddy唯一写业务模板/静态资源与必要检查；Codex规划/独立复核和临时账号浏览器验收。当前8000未监听，待资源/模板完成后由Codex启动；不重置DB、不覆盖用户项目。
+- 下一步：实现后核验真实创建/关联/读写、失败恢复、身份隔离及390/768/1440布局，再交用户体验。
+
+## 上一快照（T014：开源调研与交互样稿已完成，待视觉反馈）
 - PLAN-r5 / RULES-r8，状态RESEARCH_AND_PREVIEW_DONE_WAITING_USER_REVIEW。已响应GitHub同类学习与开源界面/动效要求；P2仍待整体验收，不自动进入P3，正式前端/桌面选型未锁定。
 - 交付docs/OPEN_SOURCE_RESEARCH.md、25份来源记录docs/OPEN_SOURCE_SOURCES.json；已查看Plane模型、OpenHands Agent Canvas架构/ACP适配、Vibe Kanban执行器。记录Vibe Kanban原公司关闭转社区维护、各许可差异；未安装或运行这些参考应用。
 - docs/previews/workbench.html为隔离样稿：Tabler1.7.0 CSS+Motion14.6.0 JS本地固定文件/许可证/SHA256；可搜索筛选、详情dialog、内存新建、减弱动效、规划入口反馈。显著说明示例数据，不接真实账号/文件/AI，不改backend或用户数据。

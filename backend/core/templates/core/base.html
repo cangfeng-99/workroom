@@ -1,0 +1,91 @@
+{% load static %}<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>{% block title %}AI协作工作台{% endblock %}</title>
+  <link rel="stylesheet" href="{% static 'core/vendor/tabler-1.7.0.min.css' %}">
+  <link rel="stylesheet" href="{% static 'core/app.css' %}">
+</head>
+<body class="{% block body_class %}{% endblock %}">
+<div class="page-shell {% if user.is_authenticated %}app-shell{% else %}auth-shell{% endif %}">
+  {% if user.is_authenticated %}
+    <aside class="sidebar" aria-label="工作台导航">
+      <a class="brand" href="{% url 'core:home' %}">
+        <span class="brand-mark" aria-hidden="true">A</span>
+        <span class="brand-text"><strong>AgentWorkspace</strong><small>AI 协作工作台</small></span>
+      </a>
+      <nav class="side-nav" aria-label="主导航">
+        <span class="nav-label">工作台</span>
+        <a class="nav-link{% if request.path == '/' %} is-active{% endif %}" href="{% url 'core:home' %}"{% if request.path == '/' %} aria-current="page"{% endif %}>首页</a>
+        <a class="nav-link{% if request.resolver_match.app_name == 'projects' %} is-active{% endif %}" href="{% url 'projects:list' %}"{% if request.resolver_match.app_name == 'projects' %} aria-current="page"{% endif %}>我的项目</a>
+        <a class="nav-link{% if request.resolver_match.app_name == 'workspaces' %} is-active{% endif %}" href="{% url 'workspaces:workspace' %}"{% if request.resolver_match.app_name == 'workspaces' %} aria-current="page"{% endif %}>文件工作区</a>
+        <span class="nav-label nav-label-gap">即将开放</span>
+        <span class="nav-link is-disabled" aria-disabled="true">任务<span class="nav-badge">规划中</span></span>
+        <span class="nav-link is-disabled" aria-disabled="true">成员<span class="nav-badge">规划中</span></span>
+        <span class="nav-link is-disabled" aria-disabled="true">AI 连接<span class="nav-badge">规划中</span></span>
+      </nav>
+      <div class="side-bottom">
+        <div class="side-user">
+          <span class="user-avatar" aria-hidden="true">{{ user.username|slice:":1"|upper }}</span>
+          <span class="user-info"><strong>{{ user.username }}</strong><small>已登录</small></span>
+        </div>
+        <form class="logout-form" method="post" action="{% url 'accounts:logout' %}">
+          {% csrf_token %}
+          <button class="nav-link logout-link" type="submit">退出登录</button>
+        </form>
+        <p class="side-foot">本地开发环境 · 文件只在本机处理</p>
+      </div>
+    </aside>
+  {% endif %}
+
+  <div class="main{% if not user.is_authenticated %} auth-column{% endif %}">
+    {% if user.is_authenticated %}
+      <header class="topbar">
+        <div class="topbar-heading">
+          {% block heading %}{% endblock %}
+        </div>
+        <div class="topbar-tools">
+          <button class="motion-toggle" type="button" data-motion-toggle role="switch" aria-checked="false" aria-label="减弱动效">
+            <span class="motion-label">减弱动效</span>
+            <span class="motion-state" data-motion-state>关</span>
+            <span class="switch-track" aria-hidden="true"><span class="switch-thumb"></span></span>
+          </button>
+        </div>
+      </header>
+    {% else %}
+      <header class="auth-top">
+        <a class="brand" href="{% url 'core:home' %}">
+          <span class="brand-mark" aria-hidden="true">A</span>
+          <span class="brand-text"><strong>AgentWorkspace</strong><small>AI 协作工作台</small></span>
+        </a>
+        <nav class="auth-nav" aria-label="账号">
+          <a href="{% url 'core:home' %}">首页</a>
+          <a href="{% url 'accounts:login' %}">登录</a>
+          <a class="auth-nav-primary" href="{% url 'accounts:signup' %}">注册</a>
+        </nav>
+      </header>
+    {% endif %}
+
+    <main class="{% if user.is_authenticated %}content{% else %}auth-main{% endif %}" id="main-content">
+      {% if not user.is_authenticated %}<div class="auth-card">{% endif %}
+        {% if error or notice or messages %}
+          <div class="page-alerts">
+            {% if error %}<div class="alert error" role="alert">{{ error }}</div>{% endif %}
+            {% if notice %}<div class="alert notice" role="status">{{ notice }}</div>{% endif %}
+            {% for message in messages %}<div class="alert {{ message.tags }}" role="status">{{ message }}</div>{% endfor %}
+          </div>
+        {% endif %}
+        {% block content %}{% endblock %}
+      {% if not user.is_authenticated %}</div>{% endif %}
+    </main>
+
+    {% if not user.is_authenticated %}<footer class="auth-foot">AI 协作工作台 · 本机开发版</footer>{% endif %}
+  </div>
+</div>
+<script src="{% static 'core/vendor/motion-14.6.0.js' %}" defer></script>
+<script src="{% static 'core/app.js' %}" defer></script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

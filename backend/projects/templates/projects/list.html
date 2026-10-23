@@ -1,13 +1,25 @@
 {% extends 'projects/base.html' %}
-{% block title %}我的项目{% endblock %}
+{% block title %}我的项目 · AI协作工作台{% endblock %}
 {% block heading %}
-  <h1>我的项目</h1>
-  <p class="muted">项目只记住文件夹位置；文件访问还需要在项目工作区显式授权，独立工作区的授权不会自动成为项目权限。</p>
-  <p><a class="button primary" href="{% url 'projects:new' %}">新建项目</a></p>
+  <p class="eyebrow">工作台 / 项目</p>
+  <div class="heading-row">
+    <div>
+      <h1>我的项目</h1>
+      <p class="page-sub">项目只记住文件夹位置；文件访问还需要在项目工作区显式授权，独立工作区的授权不会自动成为项目权限。</p>
+    </div>
+    <div class="heading-actions">
+      <a class="button primary" href="{% url 'projects:new' %}">新建项目</a>
+    </div>
+  </div>
 {% endblock %}
 {% block content %}
   <section class="card">
-    <h2>当前文件夹授权</h2>
+    <div class="card-head">
+      <div>
+        <h2>当前文件夹授权</h2>
+        <p>本次登录的文件夹授权状态，仅影响当前账号的页面。</p>
+      </div>
+    </div>
     {% if grant %}
       <p>{% if grant_usable %}本次登录已授权{% else %}已失效的授权记录{% endif %}：<span class="dir">{{ grant.root }}</span></p>
       {% if grant.project_id %}
@@ -32,34 +44,63 @@
   </section>
 
   <section class="card">
-    <h2>项目列表</h2>
+    <div class="card-head">
+      <div>
+        <h2>项目列表</h2>
+        <p>只显示当前账号创建的项目；授权状态按本次登录计算。</p>
+      </div>
+      {% if projects %}<span class="count" id="project-count" aria-live="polite">{{ projects|length }} 个项目</span>{% endif %}
+    </div>
     {% if projects %}
-      <ul class="projects">
+      <div class="toolbar" role="search">
+        <label class="search-box" for="project-search">
+          <span class="sr-only">搜索项目名称或说明</span>
+          <input class="form-control" id="project-search" type="search" placeholder="搜索项目名称或说明" autocomplete="off">
+        </label>
+        <label class="sr-only" for="status-filter">按授权状态筛选</label>
+        <select class="form-select filter-select" id="status-filter">
+          <option value="all">全部授权状态</option>
+          <option value="authorized">已授权</option>
+          <option value="pending">尚未授权</option>
+        </select>
+        <button class="button ghost" type="button" id="clear-filters">重置</button>
+      </div>
+      <noscript><p class="hint">筛选需要 JavaScript；下方项目链接与表单仍可直接使用。</p></noscript>
+      <ul class="projects project-list" id="project-list">
         {% for project in projects %}
-          <li>
-            <a href="{% url 'projects:detail' project.pk %}">{{ project.name }}</a>
-            <p class="muted" style="margin:4px 0 0;">
-              {% if project.workspace_path %}已关联位置：<span class="dir">{{ project.workspace_path }}</span>{% else %}尚未关联文件夹{% endif %}
-              · 更新于 {{ project.updated_at|date:"Y-m-d H:i" }}
-            </p>
-            <p style="margin:6px 0 0;">
-              {% if project.authorized %}
-                <span class="status on">已授权，可读写</span>
-              {% else %}
-                <span class="status off">尚未授权</span>
-                <span class="muted">{% if project.workspace_path %}本次登录尚未授权该文件夹{% else %}关联文件夹并授权后才能读写{% endif %}</span>
+          <li class="project-item" data-name="{{ project.name }}" data-search="{{ project.name }} {{ project.description }}" data-status="{{ project.authorized|yesno:'authorized,pending' }}">
+            <span class="project-icon" aria-hidden="true">{{ project.name|slice:":1" }}</span>
+            <div class="project-info">
+              <div class="title-line">
+                <a class="project-title" href="{% url 'projects:detail' project.pk %}">{{ project.name }}</a>
+                {% if project.authorized %}
+                  <span class="status on">已授权，可读写</span>
+                {% else %}
+                  <span class="status off">尚未授权</span>
+                {% endif %}
+              </div>
+              <p class="meta-line">
+                {% if project.workspace_path %}已关联位置：<span class="dir">{{ project.workspace_path }}</span>{% else %}尚未关联文件夹{% endif %}
+                <span class="meta-sep">·</span>更新于 {{ project.updated_at|date:"Y-m-d H:i" }}
+              </p>
+              {% if not project.authorized %}
+                <p class="meta-line muted">{% if project.workspace_path %}本次登录尚未授权该文件夹{% else %}关联文件夹并授权后才能读写{% endif %}</p>
               {% endif %}
-            </p>
-            {% if project.can_link_grant %}
-              <form method="post" action="{% url 'projects:link_workspace' project.pk %}" class="actions" style="margin-top:8px;">
-                {% csrf_token %}
-                <button type="submit" class="secondary">关联到此项目</button>
-                <span class="muted">将 <span class="dir">{{ grant.root }}</span> 用于此项目。关联后，请从本项目进入工作区。</span>
-              </form>
-            {% endif %}
+              {% if project.can_link_grant %}
+                <form method="post" action="{% url 'projects:link_workspace' project.pk %}" class="actions link-action">
+                  {% csrf_token %}
+                  <button type="submit" class="secondary">关联到此项目</button>
+                  <span class="muted">将 <span class="dir">{{ grant.root }}</span> 用于此项目。关联后，请从本项目进入工作区。</span>
+                </form>
+              {% endif %}
+            </div>
           </li>
         {% endfor %}
       </ul>
+      <div class="empty-state" id="project-empty" hidden>
+        <strong>没有匹配的项目</strong>
+        <span>试试其他关键词，或清除授权状态筛选。</span>
+      </div>
     {% else %}
       <p class="empty">还没有项目。点击“新建项目”开始，也可以先到 <a href="{% url 'workspaces:workspace' %}">工作区</a> 授权一个文件夹。</p>
     {% endif %}

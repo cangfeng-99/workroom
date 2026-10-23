@@ -1,0 +1,42 @@
+{
+  "purpose": "T015 real Django UI, fixed local vendor assets",
+  "fetched_date": "2026-10-23",
+  "files": [
+    {
+      "file": "tabler-1.7.0.min.css",
+      "package": "@tabler/core",
+      "version": "1.7.0",
+      "license": "MIT",
+      "source": "https://cdn.jsdelivr.net/npm/@tabler/core@1.7.0/dist/css/tabler.min.css",
+      "sha256": "9efa2db2d4f50146d68f03d0d857de52a1d42ca0f6d153c63429b9c948a943ea",
+      "bytes": 679792
+    },
+    {
+      "file": "TABLER-LICENSE.txt",
+      "package": "@tabler/core",
+      "version": "1.7.0",
+      "license": "MIT",
+      "source": "https://api.github.com/repos/tabler/tabler/git/blobs/aa69649cde83c2d6517ec2498a9c10f5bb3bf54c",
+      "sha256": "4f88a82d13be3c5c63a12c5631eae914aa4381b6dc17641bf1ab85f3f8f6c8a5",
+      "bytes": 1090
+    },
+    {
+      "file": "motion-14.6.0.js",
+      "package": "motion",
+      "version": "14.6.0",
+      "license": "MIT",
+      "source": "https://cdn.jsdelivr.net/npm/motion@14.6.0/dist/motion.js",
+      "sha256": "5cd165acfdf8e14ca5358c3d876142e5465419ee0d100bcf195da474cf8db2bf",
+      "bytes": 172451
+    },
+    {
+      "file": "MOTION-LICENSE.txt",
+      "package": "motion",
+      "version": "14.6.0",
+      "license": "MIT",
+      "source": "https://cdn.jsdelivr.net/npm/motion@14.6.0/LICENSE.md",
+      "sha256": "1bf0dc3f7727723e5a032ed12164a47cf92c05204cb1a3485f123c24e2833ed1",
+      "bytes": 1100
+    }
+  ]
+}

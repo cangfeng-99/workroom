@@ -1,7 +1,9 @@
 {% extends "accounts/base.html" %}
 {% block title %}注册 · AI协作工作台{% endblock %}
-{% block content %}
+{% block auth_content %}
+  <p class="eyebrow">账号</p>
   <h1>注册账号</h1>
+  <p class="auth-sub">创建本机账号后即可建立项目并授权文件夹。</p>
   <form method="post">
     {% csrf_token %}
     {% for field in form %}
@@ -9,10 +11,10 @@
         <label for="{{ field.id_for_label }}">{{ field.label }}</label>
         {{ field }}
         {% if field.help_text %}<p class="help">{{ field.help_text }}</p>{% endif %}
-        {% if field.errors %}<div class="alert" role="alert">{{ field.errors }}</div>{% endif %}
+        {% if field.errors %}<div class="alert error field-alert" role="alert">{{ field.errors }}</div>{% endif %}
       </div>
     {% endfor %}
-    <button type="submit">注册并登录</button>
+    <button type="submit" class="primary">注册并登录</button>
   </form>
   <p class="switch"><a href="{% url 'accounts:login' %}">已有账号？登录</a></p>
   <p class="switch"><a href="{% url 'core:home' %}">返回首页</a></p>
