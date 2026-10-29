@@ -1384,3 +1384,49 @@ body.present-mode .work-single {
 
 .pretty-select .pretty-menu li:hover { background: #f1f4f7; }
 .pretty-select .pretty-menu li.is-on { background: #1b2026; color: #fff; }
+
+/* ===== 返回入口统一为胶囊 ===== */
+/* 原来 rail-back / backup-back / manage-back / 纯文字链 四种样子，
+   目标和文案也不一致；统一成工作区那种胶囊，位置各自保留。 */
+.back-pill,
+.rail-back,
+.backup-back,
+.manage-nav a.manage-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 30px;
+  padding: 0 14px;
+  border: 1px solid #d9dee4;
+  border-radius: 999px;
+  background: #fff;
+  color: #1b2026;
+  font-size: 12.5px;
+  font-weight: 500;
+  line-height: 1;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.back-pill:hover,
+.rail-back:hover,
+.backup-back:hover,
+.manage-nav a.manage-back:hover {
+  border-color: #b9c2cc;
+  color: #12181e;
+}
+
+.back-pill .icon,
+.rail-back .icon {
+  flex: none;
+  opacity: .7;
+}
+
+/* 极光背景原本是绿色 rgba(72,205,156)，去绿时漏了这层，改成中性冷灰 */
+body::before {
+  background: radial-gradient(circle, rgba(120, 138, 158, .16), rgba(120, 138, 158, 0) 68%);
+}
+
+body::after {
+  background: radial-gradient(circle, rgba(120, 138, 158, .10), rgba(120, 138, 158, 0) 68%);
+}

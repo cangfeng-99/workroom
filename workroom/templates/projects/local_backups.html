@@ -4,8 +4,7 @@
 {% block content %}
 <main class="backup-shell">
   <header class="backup-header">
-    <a class="backup-back" href="{% url 'projects:index' %}">返回项目</a>
-    <span class="backup-local">本机单人版</span>
+    <a class="back-pill" href="{% url 'projects:index' %}">{% include 'projects/_icon.html' with name='back' %} 全部项目</a>
   </header>
   <div class="backup-heading"><h1>备份与恢复</h1><p>把项目和记忆带走，需要时再找回来。全部操作都在这台电脑上完成。</p></div>
 

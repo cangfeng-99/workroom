@@ -3,7 +3,7 @@
 {% block body_class %}page-guide{% endblock %}
 {% block content %}
 <main class="guide-shell">
-  <header class="guide-header"><a href="{% url 'projects:index' %}">返回项目</a><span>本机单人版</span></header>
+  <header class="guide-header"><a class="back-pill" href="{% url 'projects:index' %}">{% include 'projects/_icon.html' with name='back' %} 全部项目</a></header>
   <div class="guide-intro"><h1>使用指南</h1><p>{{ guide_intro }}</p></div>
   {% if error %}<div class="guide-error" role="alert"><strong>这次还没有打开练习项目</strong><p>{{ error }}</p></div>{% endif %}
   <section class="guide-practice" aria-labelledby="practice-title">

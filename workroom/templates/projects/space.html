@@ -116,8 +116,7 @@
   <div class="workspace{% if not server_mode %} workspace-personal{% endif %}{% if selected or selected_entry %} workspace-reading{% endif %}"{% if server_mode %} data-snapshot-url="{% url 'projects:snapshot' project.pk %}"{% endif %}>
     <header class="crumb">
       <div class="crumb-path">
-        <a href="{% url 'projects:index' %}">项目</a>
-        <span class="crumb-sep">/</span>
+        <a class="back-pill" href="{% url 'projects:index' %}">{% include 'projects/_icon.html' with name='back' %} 全部项目</a>
         <span class="crumb-current">{{ project.name }}</span>
       </div>
       <div class="crumb-meta">

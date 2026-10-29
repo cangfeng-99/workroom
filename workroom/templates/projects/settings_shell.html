@@ -10,7 +10,7 @@
   </header>
   <div class="manage-layout">
     <nav class="manage-nav" aria-label="项目管理">
-      <a class="manage-back" href="{% url 'projects:space' project.pk %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m14 7-5 5 5 5"/></svg>返回项目</a>
+      <a class="manage-back" href="{% url 'projects:space' project.pk %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m14 7-5 5 5 5"/></svg>返回项目工作区</a>
       <a href="{% url 'projects:connections' project.pk %}"{% if request.resolver_match.url_name == 'connections' %} class="is-active" aria-current="page"{% endif %}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3v5m8-5v5M6 8h12v4a6 6 0 0 1-12 0V8Zm6 10v3"/></svg>工具连接</a>
       {% if owner_controls or can_review %}
       <a href="{% url 'projects:settings' project.pk %}"{% if request.resolver_match.url_name == 'settings' %} class="is-active" aria-current="page"{% endif %}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 17h16M8 4v6m8 4v6"/></svg>基础设置</a>
