@@ -83,7 +83,6 @@ body {
   box-shadow: var(--nm-inset), 0 0 0 2px var(--nm-accent-deep);
 }
 
-/* 主按钮：灰绿强调，仍走拟物 */
 .btn.primary,
 .rail-new,
 .send-btn {
@@ -104,7 +103,6 @@ body {
   box-shadow: var(--nm-inset), inset 0 0 0 99px rgba(0, 0, 0, .04);
 }
 
-/* 选中态：内凹 */
 .status-switch button.is-on,
 .tab.is-active {
   border: 0;
@@ -146,7 +144,6 @@ body {
 .stage-task.is-done { border-left-color: #7aa58f; }
 .stage-task.is-blocked { border-left-color: #b57b75; }
 
-/* 输入：内凹槽 */
 input[type="text"],
 input[type="password"],
 input[type="url"],
@@ -167,7 +164,6 @@ select:focus {
   box-shadow: var(--nm-inset-sm), 0 0 0 2px var(--nm-accent-deep);
 }
 
-/* 标签页、徽标、小胶囊 */
 .tabs { border-bottom: 0; }
 .tab { border: 0; border-radius: 999px; color: var(--muted); }
 .tab.is-active { color: var(--ink); }
@@ -185,17 +181,14 @@ select:focus {
 .stage-task.is-done .st-status { background: var(--nm-bg); color: #4f7a65; box-shadow: var(--nm-inset-sm); }
 .stage-task.is-blocked .st-status { background: var(--nm-bg); color: #9a5a54; box-shadow: var(--nm-inset-sm); }
 
-/* 左栏与顶栏：取消金属边 */
 .rail { border-right: 0; box-shadow: 6px 0 16px rgba(190, 190, 190, .35); }
 .topbar, .tabs, .toolbar { border-color: transparent; }
 .rail-label { color: var(--faint); }
 .rail-connect { justify-content: flex-start; height: 38px; }
 
-/* 发送键保持圆形 */
 .send-btn { border-radius: 50%; }
 CSSEOF
 
-/* 聊天与左栏：去掉残留白底和边框 */
 .composer {
   border: 0;
   background: var(--nm-bg);
@@ -225,7 +218,6 @@ select {
 .stage { background: transparent; box-shadow: none; }
 .stage-head { border-bottom: 0; background: transparent; }
 
-/* 清除旧主题残留的白色渐变 */
 .crumb,
 .topbar,
 .panel,
@@ -288,7 +280,6 @@ progress { accent-color: #6d6d6d; }
 .brand, .brand:visited { color: #333; }
 .brand img { filter: grayscale(1) !important; }
 
-/* 所有按钮统一胶囊形 */
 button,
 .btn,
 .mode-trigger,
@@ -393,7 +384,6 @@ summary.btn,
 .rail { scrollbar-width: none; }
 .rail::-webkit-scrollbar { width: 0; height: 0; }
 
-/* 悬停一律中性灰，不再泛绿 */
 .tab:hover,
 .ai-option:hover,
 .table-row:hover,
@@ -417,7 +407,6 @@ summary.btn,
 .node-goal:hover { border-color: #9a9da0; }
 .filter select:hover { border-color: #9a9da0; }
 
-/* 字体整体加大加粗 */
 body { font-size: 15px; font-weight: 500; line-height: 1.65; }
 h1, h2, h3, .index-head h1, .progress-heading h1 { font-weight: 700; }
 .btn, .tab, .mode-trigger, .rail-connect, .rail-new, .status-switch button,
@@ -457,7 +446,6 @@ h1, h2, h3, .index-head h1, .progress-heading h1 { font-weight: 700; }
   box-shadow: inset 3px 3px 6px #d2d2d2, inset -3px -3px 6px #ffffff;
 }
 
-/* 白底聊天区里，气泡用浅灰区分层次 */
 .chat-log { padding: 16px 18px; }
 .bubble {
   background: #f6f6f6;
@@ -471,7 +459,6 @@ h1, h2, h3, .index-head h1, .progress-heading h1 { font-weight: 700; }
   text-overflow: ellipsis;
 }
 
-/* ===== 亮色主题 ===== */
 :root {
   --bg: #f7f8f9;
   --panel: #ffffff;
@@ -519,16 +506,13 @@ main {
   color: var(--ink);
 }
 
-/* 去掉鼠标跟随的绿色光斑 */
 .card::after { display: none !important; }
 
-/* 卡片悬停只抬起，不变绿 */
 .card:hover {
   border-color: var(--line-strong);
   box-shadow: 0 10px 26px rgba(20, 30, 40, .10);
 }
 
-/* 正文与次要文字加深一档 */
 .muted, .hint, .small, .stage-meta, .st-meta { color: var(--muted); }
 
 /* 进度条与进度提示：绿色改中性灰，和整体一致 */
@@ -538,14 +522,12 @@ main {
 .project-progress progress::-moz-progress-bar { background: #3d444c; }
 .progress-next { background: #eef1f4; color: #333a42; }
 
-/* 首页卡片进度条：渐变绿改中性灰 */
 .bar { background: #e8ecf0; }
 .bar > span {
   background-image: none;
   background-color: #414851;
 }
 
-/* ===== 中性灰收口 ===== */
 .rail-new,
 .rail-new:hover,
 .rail-new:active {
@@ -557,7 +539,6 @@ main {
 }
 .rail-new:hover { background: #f4f6f8; }
 
-/* 任务卡：去掉淡绿底 */
 .stage-task,
 .stage-task.is-todo,
 .stage-task.is-done {
@@ -618,7 +599,6 @@ main {
 .new-project > summary { border-radius: 13px; }
 .new-project[open] > summary { border-radius: 13px 13px 0 0; }
 
-/* ===== 悬停：整圈跟随状态色、左侧加粗，不留灰边 ===== */
 .stage-task {
   transition: border-color .16s ease, box-shadow .16s ease, background .16s ease;
 }
@@ -652,7 +632,6 @@ main {
     0 6px 16px rgba(20, 30, 40, .08);
 }
 
-/* ===== 说明文字加深，状态行同步提一档 ===== */
 .st-detail {
   color: #2b333b;
   font-weight: 500;
@@ -661,7 +640,6 @@ main {
 .st-meta { color: #4a525b; }
 .st-status { color: #3a424b; }
 
-/* ===== 悬停 ===== */
 .stage-task:hover,
 .stage-task.is-todo:hover,
 .stage-task.is-doing:hover,
@@ -713,11 +691,9 @@ main {
 .stage-task.is-done:hover .st-status { color: #0c8a5e; box-shadow: inset 0 0 0 1px rgba(18, 201, 138, .45); }
 .stage-task.is-blocked:hover .st-status { color: #b53a3a; box-shadow: inset 0 0 0 1px rgba(255, 92, 92, .45); }
 
-/* ===== 说明文字再深一档 ===== */
 .st-detail { color: #1f262d; }
 .stage-task:hover .st-detail { color: #12181e; }
 
-/* ===== 左侧状态竖条连续贯通（补上卡片之间的 8px 间隙） ===== */
 .stage-task { position: relative; }
 .stage-task { --stripe: #c3cad2; }
 .stage-task.is-todo { --stripe: #a9bdd1; }
@@ -738,7 +714,6 @@ main {
 .stage-body > .stage-task:last-child::after { display: none; }
 .stage-task:hover::after { height: 18px; }
 
-/* ===== 改为贴合列表：去掉连接线，卡片首尾相连，中间不留任何缝 ===== */
 .stage-task::after { display: none !important; }
 
 .stage-body { gap: 0; }
@@ -792,7 +767,6 @@ main {
 }
 .stage-body > .stage-task:hover .st-title { color: #12181e; }
 
-/* ===== 恢复独立圆角卡片 + 间距（不要贴合、不要连接块） ===== */
 .stage-body { gap: 10px; }
 
 .stage-body > .stage-task,
@@ -813,7 +787,6 @@ main {
   margin-top: 0;
 }
 
-/* 有间距了可以放心做上浮 */
 .stage-body > .stage-task:hover {
   transform: translateY(-2px);
   box-shadow:
@@ -823,10 +796,8 @@ main {
   z-index: 3;
 }
 
-/* 连接线彻底不要 */
 .stage-task::after { display: none !important; }
 
-/* ===== 间距 14px；悬停用真实边框加粗（不再外挂一圈） ===== */
 .stage-body { gap: 14px; }
 
 .stage-body > .stage-task,
@@ -852,7 +823,6 @@ main {
   z-index: 3;
 }
 
-/* ===== 阶段列去掉白色底，只留文字和任务卡 ===== */
 .stage,
 .stage-head {
   background: transparent;
@@ -867,7 +837,6 @@ main {
   padding: 10px 11px 10px 7px;
 }
 
-/* ===== 状态胶囊统一 3 字宽度，左边缘对齐 ===== */
 .st-status,
 .st-review {
   display: inline-block;
@@ -877,7 +846,6 @@ main {
   text-align: center;
 }
 
-/* ===== 阶段列：流动虚线框，替代原来的白底 ===== */
 .timeline { align-items: stretch; }
 
 .stage { position: relative; }
@@ -908,7 +876,6 @@ main {
 /* 列等高会把内容多的列截断，改回按内容高度，虚线框跟着包裹 */
 .timeline { align-items: flex-start; }
 
-/* 虚线加深一档，滚动时更明显 */
 .stage::before {
   background-image:
     repeating-linear-gradient(90deg, #a7b2bf 0 6px, transparent 6px 13px),
@@ -917,7 +884,6 @@ main {
     repeating-linear-gradient(180deg, #a7b2bf 0 6px, transparent 6px 13px);
 }
 
-/* ===== 虚线框改用 SVG 描边：圆角连续、四边同向流动 ===== */
 .stage::before { display: none !important; }
 
 .stage {
@@ -966,7 +932,6 @@ main {
 /* 阶段头状态：按子任务实时聚合，颜色跟随 */
 .stage-rollup { font-weight: 600; }
 
-/* ===== 聊天页整块白底，输入框内留白 ===== */
 .work-single {
   background: #ffffff;
 }
@@ -982,7 +947,6 @@ main {
   padding: 10px 10px 10px 14px;
 }
 
-/* ===== AI 执行回执：把"做了什么"摊开给用户核对 ===== */
 .action-receipt {
   margin: 10px 0 0;
   padding: 8px 0 0;
@@ -1045,7 +1009,6 @@ main {
   .stage:hover .stage-frame rect { animation: none !important; }
 }
 
-/* 聊天分页入口 */
 .chat-earlier {
   display: block;
   width: fit-content;
@@ -1061,7 +1024,6 @@ main {
 
 .chat-earlier:hover { background: #e6e9ee; color: #12181e; }
 
-/* ===== 渲染成本：视口外的列/消息不参与布局 ===== */
 .stage {
   content-visibility: auto;
   contain-intrinsic-size: auto 600px;
@@ -1072,7 +1034,6 @@ main {
   contain-intrinsic-size: auto 120px;
 }
 
-/* ===== 切页反馈：顶部进度条 + 内容轻微淡出 ===== */
 .page-progress {
   position: fixed;
   top: 0;
@@ -1097,7 +1058,6 @@ body.is-navigating .work {
   transition: opacity .16s ease;
 }
 
-/* ===== 依赖链路聚焦（参考 archify 的路径追踪） ===== */
 .chain-bar {
   display: flex;
   align-items: center;
@@ -1156,7 +1116,6 @@ body.is-navigating .work {
 .chain-up .chain-tag { background: #fdf0dc; color: #8a5a12; }
 .chain-down .chain-tag { background: #e3f8ee; color: #0c8a5e; }
 
-/* ===== 演示模式（按 F 切换，参考 archify 的 presentation view） ===== */
 body.present-mode .rail,
 body.present-mode .crumb,
 body.present-mode .tabs,
@@ -1199,7 +1158,6 @@ body.present-mode::after {
   pointer-events: none;
 }
 
-/* 演示时不要背景色团，画面要干净 */
 body.present-mode::before {
   display: none;
 }
@@ -1229,7 +1187,6 @@ body.present-mode .work-single {
   color: #4a3d28;
 }
 
-/* ===== 阅读态分屏：正文在左，设置区在右 ===== */
 /* 单人模式给 .work 加了 .work-single，把 grid 压成单列
    （grid-template-columns: minmax(0,1fr)），设置区于是掉到正文下面。
    选中任务后必须恢复两列，否则永远是上下分屏。 */
@@ -1296,7 +1253,6 @@ body.present-mode .work-single {
   color: #1b2026;
 }
 
-/* ===== 阅读正文不再限宽 ===== */
 /* 76ch 在带设置区的双栏里会白掉两侧一大块；改成铺满，只留 padding 做边距 */
 .workspace-reading .task-reader,
 .workspace-reading .task-reader[data-library-reader] {
@@ -1312,7 +1268,6 @@ body.present-mode .work-single {
   }
 }
 
-/* ===== 表单下拉：替换原生 select 的浏览器外观 ===== */
 .pretty-select { position: relative; }
 
 /* 只做表单取值，视觉隐藏（保留在 DOM 里，提交不受影响） */
@@ -1385,7 +1340,6 @@ body.present-mode .work-single {
 .pretty-select .pretty-menu li:hover { background: #f1f4f7; }
 .pretty-select .pretty-menu li.is-on { background: #1b2026; color: #fff; }
 
-/* ===== 返回入口统一为胶囊 ===== */
 /* 原来 rail-back / backup-back / manage-back / 纯文字链 四种样子，
    目标和文案也不一致；统一成工作区那种胶囊，位置各自保留。 */
 .back-pill,

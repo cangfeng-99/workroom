@@ -3144,7 +3144,6 @@ body.page-server .workflow-form input:focus-visible, body.page-server .workflow-
 }
 .node:hover { transform: translateY(-2px); box-shadow: 0 10px 24px rgba(20, 60, 40, .12); }
 
-/* 统一按钮体系 */
 .btn, .rail-connect, .mode-trigger, .status-switch button, .zoom-btn {
   border-radius: 9px;
   font-family: inherit;
@@ -3185,7 +3184,6 @@ body.page-server .workflow-form input:focus-visible, body.page-server .workflow-
 
 .st-review { display: inline-block; margin-right: 4px; padding: 1px 6px; border-radius: 999px; background: rgba(196, 132, 30, .14); color: #8a5a12; font-size: 10.5px; }
 
-/* ============ 金属拟物主题（统一覆盖层） ============ */
 :root {
   --metal-line: #9a9da0;
   --metal-line-soft: #c6c9cb;
@@ -3207,7 +3205,6 @@ body {
     linear-gradient(180deg, #f4f5f7 0%, #e6e8ec 100%);
 }
 
-/* 按钮：统一金属胶囊 */
 .btn,
 .mode-trigger,
 .status-switch button,
@@ -3250,7 +3247,6 @@ body {
   outline-offset: 2px;
 }
 
-/* 主按钮：绿色金属 */
 .btn.primary {
   border-color: #0a5a42;
   background: linear-gradient(to top, #0d6b4f 0%, #2aa87e 70%, #37b98c 100%);
@@ -3272,7 +3268,6 @@ body {
   box-shadow: inset 0 2px 4px rgba(0, 0, 0, .18);
 }
 
-/* 卡片、面板、阶段列 */
 .card,
 .settings-card,
 .stage,
@@ -3289,7 +3284,6 @@ body {
   box-shadow: inset 0 1px 0 #fff, 0 10px 24px rgba(30, 50, 40, .12);
 }
 
-/* 任务卡：保留状态色左边条 */
 .stage-task {
   border: 1px solid var(--metal-line-soft);
   border-left-width: 3px;
@@ -3303,7 +3297,6 @@ body {
   box-shadow: inset 0 1px 0 #fff, 0 6px 16px rgba(30, 50, 40, .14);
 }
 
-/* 输入类：内凹金属 */
 input[type="text"],
 input[type="password"],
 input[type="url"],
@@ -3324,7 +3317,6 @@ select:focus {
   outline: none;
 }
 
-/* 标签页：选中态做轻微凸起 */
 .tab {
   border-radius: 999px;
   border: 1px solid transparent;
@@ -3335,7 +3327,6 @@ select:focus {
   box-shadow: var(--metal-inset);
 }
 
-/* 小徽标 */
 .chip, .st-status, .st-review, .client-badge {
   border: 1px solid rgba(110, 116, 120, .25);
   background: linear-gradient(to bottom, #fff, #eceeee);
