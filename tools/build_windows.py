@@ -104,7 +104,7 @@ def main():
         "dependencies": versions,
         "signed": False,
         "commit": _git("rev-parse", "--short", "HEAD"),
-        "dirty": bool(_git("status", "--porcelain")),
+        "dirty": bool(_git("status", "--porcelain", "--untracked-files=no")),
     }
     (package / "build-manifest.json").write_text(
         json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8"
