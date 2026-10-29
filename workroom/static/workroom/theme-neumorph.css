@@ -1297,3 +1297,19 @@ body.present-mode .work-single {
   border-color: #b9c2cc;
   color: #1b2026;
 }
+
+/* ===== 阅读正文不再限宽 ===== */
+/* 76ch 在带设置区的双栏里会白掉两侧一大块；改成铺满，只留 padding 做边距 */
+.workspace-reading .task-reader,
+.workspace-reading .task-reader[data-library-reader] {
+  width: 100% !important;
+  max-width: none !important;
+  margin: 0 !important;
+  padding: 26px 30px 44px;
+}
+@media (max-width: 860px) {
+  .workspace-reading .task-reader,
+  .workspace-reading .task-reader[data-library-reader] {
+    padding: 22px 20px 36px;
+  }
+}
