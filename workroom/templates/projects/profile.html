@@ -18,7 +18,7 @@
     <form method="post" class="settings-card workflow-form">
       {% csrf_token %}
       <label>主身份
-        <select name="role">
+        <select name="role" data-pretty>
           {% for value, label in roles %}
             <option value="{{ value }}"{% if profile.role == value %} selected{% endif %}>{{ label }}</option>
           {% endfor %}

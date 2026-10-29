@@ -1,6 +1,89 @@
 (function () {
   'use strict';
 
+  // 原生 <select> 的展开列表由浏览器绘制，CSS 碰不到（蓝色高亮、系统边框）。
+  // 这里包成和主题一致的下拉；select 本身只负责表单取值，视觉上隐藏。
+  document.querySelectorAll('select[data-pretty]').forEach(function (select) {
+    var wrap = document.createElement('div');
+    wrap.className = 'pretty-select';
+    select.parentNode.insertBefore(wrap, select);
+    wrap.appendChild(select);
+    select.classList.add('pretty-native');
+    select.setAttribute('tabindex', '-1');
+
+    var trigger = document.createElement('button');
+    trigger.type = 'button';
+    trigger.className = 'pretty-trigger';
+    trigger.setAttribute('aria-haspopup', 'listbox');
+    trigger.setAttribute('aria-expanded', 'false');
+
+    var label = document.createElement('span');
+    label.className = 'pretty-label';
+    trigger.appendChild(label);
+
+    var caret = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    caret.setAttribute('class', 'icon pretty-caret');
+    caret.setAttribute('viewBox', '0 0 16 16');
+    caret.setAttribute('aria-hidden', 'true');
+    var path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    path.setAttribute('d', 'M4 6l4 4 4-4');
+    path.setAttribute('fill', 'none');
+    path.setAttribute('stroke', 'currentColor');
+    path.setAttribute('stroke-width', '1.6');
+    path.setAttribute('stroke-linecap', 'round');
+    path.setAttribute('stroke-linejoin', 'round');
+    caret.appendChild(path);
+    trigger.appendChild(caret);
+
+    var menu = document.createElement('ul');
+    menu.className = 'pretty-menu';
+    menu.setAttribute('role', 'listbox');
+    menu.hidden = true;
+
+    function sync() {
+      var current = select.options[select.selectedIndex];
+      label.textContent = current ? current.textContent : '';
+      Array.prototype.forEach.call(menu.children, function (item) {
+        item.classList.toggle(
+          'is-on',
+          item.getAttribute('data-value') === select.value
+        );
+      });
+    }
+
+    Array.prototype.forEach.call(select.options, function (option) {
+      var item = document.createElement('li');
+      item.setAttribute('role', 'option');
+      item.setAttribute('data-value', option.value);
+      item.textContent = option.textContent;
+      item.addEventListener('click', function () {
+        select.value = option.value;
+        sync();
+        menu.hidden = true;
+        trigger.setAttribute('aria-expanded', 'false');
+        trigger.focus();
+        select.dispatchEvent(new Event('change', { bubbles: true }));
+      });
+      menu.appendChild(item);
+    });
+
+    wrap.appendChild(trigger);
+    wrap.appendChild(menu);
+    sync();
+
+    trigger.addEventListener('click', function (event) {
+      event.stopPropagation();
+      menu.hidden = !menu.hidden;
+      trigger.setAttribute('aria-expanded', menu.hidden ? 'false' : 'true');
+    });
+    document.addEventListener('click', function () {
+      if (menu.hidden) {
+        return;
+      }
+      menu.hidden = true;
+      trigger.setAttribute('aria-expanded', 'false');
+    });
+  });
   var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   var sharedProject = document.querySelector('[data-snapshot-url]');
   if (sharedProject) {
@@ -974,4 +1057,5 @@ document.querySelectorAll('[data-copy-target]').forEach((button) => {
       button.textContent = '已选中，请复制';
     }
   });
+
 });

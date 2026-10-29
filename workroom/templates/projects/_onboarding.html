@@ -22,7 +22,7 @@
     <p class="hint" id="onboarding-goal-help">写具体结果即可，后面可以修改，不必现在列完所有功能。</p>
 
     <label for="onboarding-role">你的身份 <span class="muted">（选填）</span></label>
-    <select id="onboarding-role" name="onboarding_role" aria-describedby="onboarding-role-help">
+    <select id="onboarding-role" name="onboarding_role" data-pretty aria-describedby="onboarding-role-help">
       <option value=""{% if not entered_role %} selected{% endif %}>稍后再选身份</option>
       {% for value, label in onboarding_roles %}<option value="{{ value }}"{% if entered_role == value %} selected{% endif %}>{{ label }}</option>{% endfor %}
     </select>
