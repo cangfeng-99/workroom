@@ -25,6 +25,19 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 
 
+def _find_app(version: str) -> Path:
+    """Locate the built .app wherever BUNDLE decided to place it."""
+    nested = ROOT / "dist" / ("WorkRoom-" + version) / "WorkRoom.app"
+    direct = ROOT / "dist" / "WorkRoom.app"
+    for candidate in (nested, direct):
+        if candidate.is_dir():
+            return candidate
+    for candidate in sorted((ROOT / "dist").glob("**/WorkRoom.app")):
+        if candidate.is_dir():
+            return candidate
+    raise SystemExit("找不到已构建的 WorkRoom.app，dist/ 下没有 BUNDLE 产物。")
+
+
 def main():
     if sys.platform != "darwin":
         raise SystemExit(
@@ -61,15 +74,17 @@ def main():
         if result.returncode:
             return result.returncode
 
-    app = ROOT / "dist" / ("WorkRoom-" + version) / "WorkRoom.app"
-    if not app.is_dir():
-        raise SystemExit("找不到已构建的 WorkRoom.app。")
+    app = _find_app(version)
+    # BUNDLE 把 .app 放在 dist/ 还是 dist/WorkRoom-<版本>/ 里，取决于是不是把
+    # COLLECT 直接喂给了 BUNDLE。元文件统一落在一个确定的目录，别写进 dist/ 根。
+    meta_dir = ROOT / "dist" / ("WorkRoom-" + version)
+    meta_dir.mkdir(parents=True, exist_ok=True)
 
-    shutil.copyfile(ROOT / "packaging/README-用户说明.txt", app.parent / "使用说明.txt")
+    shutil.copyfile(ROOT / "packaging/README-用户说明.txt", meta_dir / "使用说明.txt")
     sys.path.insert(0, str(ROOT / "workroom"))
     from guide_content import render_markdown
 
-    (app.parent / "使用指南.md").write_text(render_markdown(), encoding="utf-8")
+    (meta_dir / "使用指南.md").write_text(render_markdown(), encoding="utf-8")
 
     manifest = {
         "product": "WorkRoom",
@@ -85,7 +100,7 @@ def main():
         "signed": False,
         "notarized": False,
     }
-    (app.parent / "build-manifest.json").write_text(
+    (meta_dir / "build-manifest.json").write_text(
         json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8"
     )
 
@@ -98,7 +113,7 @@ def main():
     staged.mkdir(parents=True)
     shutil.copytree(app, staged / "WorkRoom.app", symlinks=True)
     for extra in ("使用说明.txt", "使用指南.md"):
-        shutil.copyfile(app.parent / extra, staged / extra)
+        shutil.copyfile(meta_dir / extra, staged / extra)
 
     built = subprocess.run(
         ["hdiutil", "create", "-volname", "WorkRoom", "-srcfolder", str(staged),
