@@ -1,0 +1,14 @@
+[Unit]
+Description=WorkRoom web
+After=network.target
+[Service]
+User=workroom
+WorkingDirectory=/opt/workroom
+EnvironmentFile=/etc/workroom.env
+ExecStart=/opt/workroom/.venv/bin/gunicorn server_wsgi:application --bind 127.0.0.1:8080 --workers 1 --threads 2 --timeout 60
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+PrivateTmp=true
+[Install]
+WantedBy=multi-user.target

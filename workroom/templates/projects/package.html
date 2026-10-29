@@ -1,0 +1,10 @@
+{% extends 'projects/settings_shell.html' %}
+{% block title %}任务包 · {{ task.title }}{% endblock %}
+{% block manage_content %}
+<header class="manage-heading"><h1>任务包</h1><p>{{ task.title }} · 把目标、执行边界和验收方式一次说明白。</p></header>
+<form method="post" class="settings-section manage-form">{% csrf_token %}{{ form.non_field_errors }}
+<div class="section-heading"><h2>任务与执行要求</h2><span class="status-tag">上下文 r{{ project.context_revision }}</span></div>
+<div class="field-grid">{% for field in form %}{% include 'projects/_field.html' with field=field %}{% endfor %}</div>
+<p class="field-help">检查由执行工具或CI运行。这里保存约定，不执行命令；文件访问仍由执行设备授权。</p>
+<div class="form-actions"><button class="btn primary" type="submit">保存任务包</button><a class="btn" href="{% url 'projects:task_delivery' project.pk task.pk %}">返回交付</a></div></form>
+{% endblock %}

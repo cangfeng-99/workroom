@@ -1,0 +1,65 @@
+x-app: &app
+  image: workroom:local
+  build: .
+  env_file: .env
+  volumes:
+    - workroom-data:/data
+  networks: [workroom]
+  logging:
+    driver: json-file
+    options: { max-size: "10m", max-file: "3" }
+  security_opt: [no-new-privileges:true]
+  cap_drop: [ALL]
+
+services:
+  migrate:
+    <<: *app
+    command: [sh, -c, "python manage.py migrate --noinput && python manage.py collectstatic --noinput"]
+    restart: "no"
+    mem_limit: 256m
+  web:
+    <<: *app
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+    restart: unless-stopped
+    ports: ["127.0.0.1:8080:8000"]
+    mem_limit: 384m
+    healthcheck:
+      test: [CMD, python, -c, "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/healthz',timeout=5)"]
+      interval: 30s
+      timeout: 6s
+      retries: 3
+      start_period: 30s
+  worker:
+    <<: *app
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+    command: [python, manage.py, workroom_worker, --worker-id, server-worker]
+    restart: unless-stopped
+    mem_limit: 512m
+  proxy:
+    image: caddy:2-alpine
+    profiles: [tls]
+    restart: unless-stopped
+    environment:
+      WORKROOM_DOMAIN: ${WORKROOM_DOMAIN:?Set WORKROOM_DOMAIN in .env}
+    ports: ["80:80", "443:443"]
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    networks: [workroom]
+    depends_on:
+      web: { condition: service_healthy }
+    mem_limit: 128m
+    logging:
+      options: { max-size: "10m", max-file: "3" }
+
+volumes:
+  workroom-data:
+  caddy-data:
+  caddy-config:
+networks:
+  workroom:
+    ipam:
+      config: [{ subnet: 172.30.86.0/24 }]

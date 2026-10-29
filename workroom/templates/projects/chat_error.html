@@ -1,0 +1,12 @@
+{% extends 'base.html' %}
+{% block title %}消息暂未发送 · WorkRoom{% endblock %}
+{% block content %}
+<main class="settings-page draft-error-page"><section class="panel workflow-panel">
+  <h1>消息暂未发送</h1>
+  <p class="error" role="alert">{{ error }}</p>
+  <p>本次没有发送，也没有额外启动模型调用。下面保留了你的输入，可复制后返回对话修改。</p>
+  <label for="unsent-message">本次输入</label>
+  <textarea id="unsent-message" rows="8" readonly>{{ message }}</textarea>
+  <a class="btn primary" href="{% url 'projects:space' project.pk %}?tab=chat">返回对话</a>
+</section></main>
+{% endblock %}

@@ -1,0 +1,15 @@
+{% extends 'projects/settings_shell.html' %}
+{% block title %}协作策略 · {{ project.name }}{% endblock %}
+{% block manage_content %}
+<header class="manage-heading"><h1>协作策略</h1><p>为真人和AI设置一致的交付要求，让每项任务有据可验。</p></header>
+<form method="post" class="settings-section">{% csrf_token %}{{ form.non_field_errors }}<div class="section-heading"><h2>任务执行与验收</h2></div>
+<div class="policy-list">
+<label class="policy-rule" for="{{ form.require_package.id_for_label }}">{{ form.require_package }}<span><strong>领取前完成任务包</strong><span class="field-help">写清目标、修改范围、基准版本和验收条件，执行者领取时保存快照。</span></span></label>
+<label class="policy-rule" for="{{ form.serialize_workspace.id_for_label }}">{{ form.serialize_workspace }}<span><strong>同一工作区只保留一个执行者</strong><span class="field-help">代码任务共享文件夹时，避免多个工具同时修改。独立工作树可分别执行。</span></span></label>
+<label class="policy-rule" for="{{ form.independent_high_risk.id_for_label }}">{{ form.independent_high_risk }}<span><strong>高风险交付需要独立复核</strong><span class="field-help">权限、数据迁移等任务由另一身份复核，再交负责人验收。</span></span></label>
+<label class="policy-rule" for="{{ form.require_checks.id_for_label }}">{{ form.require_checks }}<span><strong>核对检查结果后才能通过</strong><span class="field-help">执行者提供约定命令的退出码和输出，负责人核对代码与证据。</span></span></label>
+</div><div class="form-actions"><button class="btn primary" type="submit">保存协作策略</button><span class="field-help">修改后，正在执行的任务需确认新版本。</span></div></form>
+<section class="settings-section"><div class="section-heading"><div><h2>交付记录</h2><p class="field-help">按实际记录统计，帮助你调整分工。</p></div></div>
+{% if metrics.actors %}<div class="manage-table-wrap"><table class="manage-table"><thead><tr><th>执行者</th><th>交付</th><th>通过</th><th>退回</th><th>首次通过</th></tr></thead><tbody>{% for row in metrics.actors %}<tr><td>{{ row.name }}</td><td>{{ row.deliveries }}</td><td>{{ row.accepted }}</td><td>{{ row.returned }}</td><td>{{ row.first_pass }}</td></tr>{% endfor %}</tbody></table></div>{% else %}<div class="manage-empty">还没有交付记录，完成第一项任务后会显示在这里。</div>{% endif %}
+{% for currency,amount in metrics.costs.items %}<p class="section-note">{{ currency }} {{ amount }} · 执行者自报合计</p>{% endfor %}<p class="section-note">费用未提供 {{ metrics.unknown_cost_count }} 条。不同币种分别统计，不折算工具积分。</p></section>
+{% endblock %}

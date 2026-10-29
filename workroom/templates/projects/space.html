@@ -1,0 +1,926 @@
+{% extends 'base.html' %}
+{% load markdown_tags %}
+{% load static %}
+{% block title %}{{ project.name }} · WorkRoom{% endblock %}
+{% block body_class %}page-space{% endblock %}
+{% block content %}
+<div class="shell">
+
+  <aside class="rail">
+    <a class="brand" href="{% url 'projects:index' %}"><img src="{% static 'workroom/favicon.svg' %}" width="18" height="18" alt="">WorkRoom</a>
+    <a class="rail-new" href="{% url 'projects:index' %}#new">{% include 'projects/_icon.html' with name='plus' %} 新建项目</a>
+
+    <p class="rail-label">项目</p>
+    <nav class="rail-projects">
+      {% for item in projects %}
+        <div class="rail-row">
+          <a class="rail-project{% if item.pk == project.pk %} is-active{% endif %}" href="{% url 'projects:space' item.pk %}">
+            <span class="rail-icon" aria-hidden="true"></span>
+            <span class="rail-name">{{ item.name }}</span>
+          </a>
+          {% if can_manage %}
+          <form class="rail-del" method="post" action="{% url 'projects:delete' item.pk %}" data-confirm="删除项目「{{ item.name }}」？任务、对话、资料都会一起删除，无法恢复。">
+            {% csrf_token %}
+            <button class="rail-del-btn" type="submit" aria-label="删除项目" title="删除项目">{% include 'projects/_icon.html' with name='close' %}</button>
+          </form>
+          {% endif %}
+        </div>
+      {% endfor %}
+    </nav>
+
+    <p class="rail-label">{% if server_mode %}团队{% else %}AI 成员{% endif %}</p>
+    <ul class="team">
+      {% for member in members %}
+        <li class="member-row">
+          {% if member.kind == 'human' %}
+            <div class="member">
+              <span class="avatar{% if member.logo_file %} has-logo{% endif %}">{% if member.logo_file %}<img src="{% static member.logo_file %}" alt="">{% else %}{{ member.initial }}{% endif %}</span>
+              <span class="member-body">
+                <span class="member-name" title="{{ member.name }}">{{ member.short_name }}</span>
+                <span class="member-role">{{ member.role|default:"未设角色" }}</span>
+              </span>
+            </div>
+          {% else %}
+            {% if can_manage %}
+            <a class="member member-link" href="{% url 'projects:member_settings' project.pk member.pk %}" title="{% if member.kind == 'ai' %}配置模型与 Key{% else %}外部工具成员{% endif %}">
+              <span class="avatar {% if member.kind == 'ai' %}avatar-ai{% else %}avatar-ext{% endif %}{% if member.logo_file %} has-logo{% endif %}">{% if member.logo_file %}<img src="{% static member.logo_file %}" alt="">{% else %}{{ member.initial }}{% endif %}</span>
+              <span class="member-body">
+                <span class="member-name" title="{{ member.name }}">{{ member.short_name }}</span>
+                <span class="member-role">{% if member.kind == 'ai' %}{{ member.role|default:"AI" }}{% if member.has_key %} · 已配置{% else %} · 未配置 Key{% endif %}{% else %}外部 · {{ member.role|default:"执行" }}{% endif %}</span>
+              </span>
+              {% if member.kind == 'ai' %}
+                <span class="key-dot{% if member.has_key %} is-on{% endif %}"></span>
+              {% else %}
+                <span class="ext-badge">MCP</span>
+              {% endif %}
+            </a>
+            {% if member.kind == 'external' %}
+              <form class="member-stop-form" method="post" action="{% url 'projects:member_stop' project.pk member.pk %}" data-confirm="请求 {{ member.name }} 停止当前工作？它下次轮询时生效。">
+                {% csrf_token %}
+                <button class="member-stop" type="submit" aria-label="请求停止" title="请求停止">{% include 'projects/_icon.html' with name='stop' %}</button>
+              </form>
+            {% endif %}
+            <form class="member-del-form" method="post" action="{% url 'projects:member_delete' project.pk member.pk %}" data-confirm="把 {{ member.name }} 移出团队？历史消息会保留。">
+              {% csrf_token %}
+              <input type="hidden" name="next" value="{{ request.get_full_path }}">
+              <button class="member-del" type="submit" aria-label="移出团队" title="移出团队">{% include 'projects/_icon.html' with name='close' %}</button>
+            </form>
+            {% else %}
+            <div class="member">
+              <span class="avatar {% if member.kind == 'ai' %}avatar-ai{% else %}avatar-ext{% endif %}{% if member.logo_file %} has-logo{% endif %}">{% if member.logo_file %}<img src="{% static member.logo_file %}" alt="">{% else %}{{ member.initial }}{% endif %}</span>
+              <span class="member-body">
+                <span class="member-name" title="{{ member.name }}">{{ member.short_name }}</span>
+                <span class="member-role">{% if member.kind == 'ai' %}{{ member.role|default:"AI" }}{% else %}外部 · {{ member.role|default:"执行" }}{% endif %}</span>
+              </span>
+            </div>
+            {% endif %}
+          {% endif %}
+        </li>
+      {% endfor %}
+    </ul>
+    {% if can_manage %}<a class="ghost ghost-link" href="{% url 'projects:member_create' project.pk %}">+ 接入 AI</a>{% endif %}
+
+    {% if external_options %}
+      <p class="rail-label">外部工具</p>
+      {% for tool in external_options %}
+        <form class="rail-ext" method="post" action="{% url 'projects:member_join_external' project.pk tool.key %}">
+          {% csrf_token %}
+          <button class="rail-ext-btn" type="submit" title="把 {{ tool.label }} 加入团队">
+            <span class="ext-dot"></span>
+            <span class="rail-ext-name">{{ tool.label }}</span>
+            <span class="rail-ext-add">{% include 'projects/_icon.html' with name='plus' %}</span>
+          </button>
+        </form>
+      {% endfor %}
+    {% endif %}
+
+    <div class="rail-foot">
+      {% if server_mode %}
+        <p class="rail-label">协作</p>
+        <a class="rail-connect" href="{% url 'projects:connections' project.pk %}">工具连接{% include 'projects/_icon.html' with name='arrow' %}</a>
+        {% if can_manage %}<a class="rail-connect" href="{% url 'projects:team' project.pk %}">成员 / 邀请 / 工具令牌{% include 'projects/_icon.html' with name='arrow' %}</a>{% endif %}
+        {% if can_manage %}<a class="rail-connect" href="{% url 'projects:settings' project.pk %}">项目设置</a>{% endif %}
+        <p class="rail-label" style="margin-top:10px">当前账号</p>
+        <p class="muted small">{{ workroom_user.get_username }}{% if membership %} · {{ membership.get_role_display }}{% endif %}</p>
+        <form method="post" action="{% url 'projects:logout' %}">{% csrf_token %}<button class="btn small" type="submit">退出</button></form>
+      {% else %}
+        <p class="rail-label">外部接入</p>
+        <a class="rail-connect" href="{% url 'projects:connect' %}">Codex / Cursor / WorkBuddy</a>
+        <p class="rail-label" style="margin-top:10px">记忆</p>
+        <a class="rail-connect" href="{% url 'projects:memory' project.pk %}">工作区与长期记忆</a>
+        <a class="rail-connect" href="{% url 'projects:guide' %}">使用指南与练习项目</a>
+      {% endif %}
+    </div>
+  </aside>
+
+  <div class="workspace{% if not server_mode %} workspace-personal{% endif %}{% if selected or selected_entry %} workspace-reading{% endif %}"{% if server_mode %} data-snapshot-url="{% url 'projects:snapshot' project.pk %}"{% endif %}>
+    <header class="crumb">
+      <div class="crumb-path">
+        <a href="{% url 'projects:index' %}">项目</a>
+        <span class="crumb-sep">/</span>
+        <span class="crumb-current">{{ project.name }}</span>
+      </div>
+      <div class="crumb-meta">
+        <details class="mobile-nav">
+          <summary class="btn small">菜单</summary>
+          <nav aria-label="移动端项目菜单">
+            <a href="{% url 'projects:index' %}">全部项目</a>
+            {% if server_mode %}<a href="{% url 'projects:connections' project.pk %}">工具连接</a>{% endif %}
+            {% if can_manage and server_mode %}<a href="{% url 'projects:settings' project.pk %}">项目设置</a><a href="{% url 'projects:team' project.pk %}">成员与邀请</a>{% endif %}
+            {% if server_mode %}<form method="post" action="{% url 'projects:logout' %}">{% csrf_token %}<button class="btn" type="submit">退出登录</button></form>{% endif %}
+          </nav>
+        </details>
+        {% if server_mode %}<button type="button" class="btn small" data-project-update hidden>项目有更新 · 点击刷新</button>{% endif %}
+        <span class="chip" data-count="{% if server_mode %}{{ percent }}{% else %}{{ progress.percent }}{% endif %}">{% if server_mode %}{{ percent }}{% else %}{{ progress.percent }}{% endif %}% 完成</span>
+        <span class="muted small">{% if server_mode %}{{ done }} / {{ total }} 个任务{% else %}{{ progress.counts.done }} / {{ progress.total }} 项具体任务{% endif %}</span>
+        {% if not server_mode and next_task %}<a class="chip next-chip" href="{% if progress.next.kind == 'review' %}{% url 'projects:task_delivery' project.pk next_task.pk %}{% else %}?tab=tasks&amp;task={{ next_task.pk }}{% endif %}">下一步：{{ progress.next.label }} · {{ next_task.title }}</a>{% endif %}
+        {% if drift_hint %}<a class="chip drift-chip" href="?tab=tasks" title="{{ drift_hint }}">任务树待补</a>{% endif %}
+      </div>
+    </header>
+
+    <nav class="tabs" aria-label="项目内容">
+      <a class="tab{% if tab == 'chat' %} is-active{% endif %}" href="?tab=chat"{% if tab == 'chat' %} aria-current="page"{% endif %}>对话</a>
+      <a class="tab{% if tab == 'tasks' %} is-active{% endif %}" href="?tab=tasks"{% if tab == 'tasks' %} aria-current="page"{% endif %}>任务树<span class="tab-count">{{ visible_total }}</span></a>
+      {% if not server_mode %}<a class="tab{% if tab == 'progress' %} is-active{% endif %}" href="?tab=progress"{% if tab == 'progress' %} aria-current="page"{% endif %}>阶段进度</a>{% endif %}
+      <a class="tab{% if tab == 'library' %} is-active{% endif %}" href="?tab=library"{% if tab == 'library' %} aria-current="page"{% endif %}>资料库<span class="tab-count">{{ library_count }}</span></a>
+      <a class="tab" href="{% url 'projects:knowledge' project.pk %}">知识库问答</a>
+    </nav>
+
+    {% if not server_mode %}
+      <details class="project-goal">
+        <summary>目标 · {{ project.goal_title }}</summary>
+        {% if project.goal_detail %}<p>{{ project.goal_detail|linebreaksbr }}</p>{% endif %}
+      </details>
+    {% endif %}
+
+    {% if product_definition %}
+      <details class="product-brief" data-product-brief>
+        <summary class="product-brief-summary">
+          <span class="product-brief-tag">产品说明</span>
+          <span class="product-brief-name">{{ product_definition.title }}</span>
+          <span class="product-brief-version">v{{ product_definition.version }}</span>
+          <svg class="product-brief-chevron" width="10" height="6" viewBox="0 0 10 6" aria-hidden="true"><path d="M1 1l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.4"/></svg>
+        </summary>
+        <div class="product-brief-body">
+          {% if product_definition.summary %}<p class="brief-lead">{{ product_definition.summary }}</p>{% endif %}
+          <section class="brief-section">
+            <h3>产品说明</h3>
+            <div class="brief-text">{{ product_definition.body|default:"还没有填写产品说明。"|markdown }}</div>
+          </section>
+          {% if product_definition.context %}
+            <section class="brief-section">
+              <h3>背景与约束</h3>
+              <p class="brief-text">{{ product_definition.context|linebreaksbr }}</p>
+            </section>
+          {% endif %}
+          {% if product_definition.options %}
+            <section class="brief-section">
+              <h3>备选方案</h3>
+              <p class="brief-text">{{ product_definition.options|linebreaksbr }}</p>
+            </section>
+          {% endif %}
+          {% if product_definition.conclusion %}
+            <section class="brief-section">
+              <h3>首版标准</h3>
+              <p class="brief-text">{{ product_definition.conclusion|linebreaksbr }}</p>
+            </section>
+          {% endif %}
+          <p class="brief-foot">来自本项目资料库的产物 · 更新于 {{ product_definition.updated_at|date:"Y-m-d" }}{% if product_definition.tag_list %} · {% for tag in product_definition.tag_list %}<span class="tag">{{ tag }}</span>{% endfor %}{% endif %}</p>
+          <p class="brief-note">项目用户目标仍以项目设置为准，这份说明补充范围与首版标准。</p>
+        </div>
+      </details>
+    {% endif %}
+
+    <div class="work{% if not server_mode %} work-single{% endif %}">
+      <section class="content">
+        {% if show_welcome %}
+          <section class="project-welcome" role="status" aria-label="项目已创建">
+            <h2>项目已创建，接下来安排第一步</h2>
+            <p>目标已保存在本机。你可以先手动添加任务，也可以连接自己的 AI，再发起立项或生成草案。</p>
+            <div class="project-welcome-actions">
+              <details class="welcome-task-create">
+                <summary class="btn small">手动添加任务</summary>
+                <form method="post" action="{% url 'projects:task_create' project.pk %}">
+                  {% csrf_token %}
+                  <label for="welcome-task-title">第一项任务</label>
+                  <input id="welcome-task-title" name="title" maxlength="160" required placeholder="例如：列出作品集需要展示的内容">
+                  <label for="welcome-task-detail">具体做什么 <span class="muted">（选填）</span></label>
+                  <textarea id="welcome-task-detail" name="detail" rows="2" placeholder="写下要交付的内容和完成标准。"></textarea>
+                  <button class="btn primary small" type="submit">保存任务</button>
+                </form>
+              </details>
+              <a class="btn small" href="{% url 'projects:profile' %}">我的身份</a>
+            </div>
+            <p class="hint">在左侧点击 AI 搭档配置模型，或通过“工具连接”接入已有工具。保存连接后再按需使用。</p>
+          </section>
+        {% endif %}
+
+        {% if tab == 'chat' %}
+          {% if not ai_members %}
+            <div class="toolbar">
+              {% if server_mode %}
+                <span class="hint">这个项目还没有可用 AI：请项目所有者在左栏「+ 接入 AI」配置模型 Key。</span>
+                <span class="badge-soft">等待配置</span>
+              {% else %}
+                <span class="hint">这个项目还没有能对话的 AI。先在左栏「+ 接入 AI」填一把 Key，或继续用演示拆分。</span>
+                <span class="badge-soft">演示响应</span>
+              {% endif %}
+            </div>
+          {% endif %}
+          {% if server_mode %}
+            <div class="toolbar queue-status">
+              <span class="hint">队列 {{ pending_jobs|length }} 个 · {% if worker_health %}worker {{ worker_health.0.id }}{% if worker_health.0.stale %}（心跳过期）{% else %}（在线）{% endif %}{% else %}没有 worker 心跳，请启动 workroom_worker{% endif %}</span>
+            </div>
+          {% endif %}
+          <div class="panel panel-chat" data-jobs-url="{% url 'projects:job_status' project.pk %}" data-poll-ms="{% if server_mode %}3000{% else %}700{% endif %}">
+            <div class="chat-log">
+              {% if has_earlier %}
+                <a class="chat-earlier" href="?tab=chat&amp;before={{ earliest_id }}">↑ 加载更早的消息</a>
+              {% endif %}
+              {% for message in messages %}
+                {% if message.role == 'system' %}
+                  <p class="sysmsg">{{ message.content }}</p>
+                {% else %}
+                <div class="msg msg-{{ message.role }}">
+                  <span class="msg-avatar{% if message.member.logo_file %} has-logo{% endif %}">{% if message.member %}{% if message.member.logo_file %}<img src="{% static message.member.logo_file %}" alt="">{% else %}{{ message.member.initial }}{% endif %}{% elif message.role == 'user' %}我{% else %}AI{% endif %}</span>
+                  <div class="bubble">
+                    {% if message.member %}
+                      <p class="bubble-name">{{ message.member.name }}{% if message.member.role %} · {{ message.member.role }}{% endif %}{% if message.phase_label %}<span class="phase-chip phase-{{ message.payload.phase }}">{{ message.phase_label }}</span>{% endif %}</p>
+                    {% endif %}
+                    <div class="bubble-text">{{ message.content|markdown }}</div>
+                    {% if message.payload.actions %}
+                      <ul class="action-receipt">
+                        {% for act in message.payload.actions %}
+                          <li class="ar-{{ act.kind }}">
+                            {% if act.kind == 'task' %}
+                              <span class="ar-tag">已建任务</span>
+                              <a href="?tab=tasks&amp;task={{ act.id }}">#{{ act.id }} {{ act.title }}</a>
+                              <span class="ar-where">→ {{ act.label }}</span>
+                            {% elif act.kind == 'status' %}
+                              <span class="ar-tag">已改状态</span>{{ act.title }} → {{ act.label }}
+                            {% elif act.kind == 'memory' %}
+                              <span class="ar-tag">已写记忆</span>{{ act.label }}
+                            {% elif act.kind == 'blocked' %}
+                              <span class="ar-tag">未执行</span>{{ act.title }}：{{ act.label }}
+                            {% elif act.kind == 'skip' %}
+                              <span class="ar-tag">已跳过</span>{{ act.title }}：{{ act.label }}
+                            {% elif act.kind == 'missing' %}
+                              <span class="ar-tag">未找到</span>{{ act.title }}：{{ act.label }}
+                            {% elif act.kind == 'warn' %}
+                              <span class="ar-tag">提醒</span>{% if act.title %}{{ act.title }}：{% endif %}{{ act.label }}
+                            {% endif %}
+                          </li>
+                        {% endfor %}
+                      </ul>
+                    {% endif %}
+                    {% if message.agent_steps %}
+                      <details class="agent-steps" open>
+                        <summary>执行步骤 · {{ message.agent_steps|length }} 步</summary>
+                        <ol>
+                          {% for step in message.agent_steps %}
+                            <li><span class="step-tool">{{ step.tool }}</span>{% if step.args.path %}<code>{{ step.args.path }}</code>{% endif %}{% if step.args.query %}<code>{{ step.args.query }}</code>{% endif %}<span class="step-summary">{{ step.summary }}</span></li>
+                          {% endfor %}
+                        </ol>
+                      </details>
+                    {% endif %}
+                    {% if message.reasoning %}
+                      <details class="reasoning">
+                        <summary>{{ message.reasoning_label }} · 点开看</summary>
+                        <div class="reasoning-body">{{ message.reasoning|markdown }}</div>
+                      </details>
+                    {% endif %}
+                    {% if message.payload.prompt_draft %}
+                      <div class="prompt-card">
+                        {% if message.payload.prompt_version %}
+                          <p class="prompt-version">第 {{ message.payload.prompt_version }} 版</p>
+                        {% endif %}
+                        {% if message.payload.prompt_applied %}
+                          <p class="hint">已按这份提示词开始。</p>
+                          <pre class="cmd-block">{{ message.payload.prompt_final }}</pre>
+                        {% elif message.payload.prompt_superseded %}
+                          <p class="hint">这一版已被新版替代，用下面那份继续。</p>
+                        {% else %}
+                          <form method="post" action="{% url 'projects:prompt_apply' project.pk message.pk %}">
+                            {% csrf_token %}
+                            <label>角色<input name="role" maxlength="2000" value="{{ message.payload.prompt_draft.role }}"></label>
+                            <label>任务<textarea name="task" rows="2">{{ message.payload.prompt_draft.task }}</textarea></label>
+                            <label>上下文<textarea name="context" rows="2">{{ message.payload.prompt_draft.context }}</textarea></label>
+                            <label>目标<textarea name="goal" rows="2">{{ message.payload.prompt_draft.goal }}</textarea></label>
+                            <label>约束<textarea name="constraints" rows="2">{{ message.payload.prompt_draft.constraints }}</textarea></label>
+                            <label>输出<textarea name="output" rows="2">{{ message.payload.prompt_draft.output }}</textarea></label>
+                            <label>验收<textarea name="acceptance" rows="2">{{ message.payload.prompt_draft.acceptance }}</textarea></label>
+                            <button class="btn primary small" type="submit">确认并开始</button>
+                          </form>
+                          <form class="prompt-actions" method="post" action="{% url 'projects:prompt_regenerate' project.pk message.pk %}">
+                            {% csrf_token %}
+                            <button class="btn small" type="submit">换一版</button>
+                            <span class="hint">保留原话，重新生成一份草案</span>
+                          </form>
+                        {% endif %}
+                      </div>
+                    {% endif %}
+                    {% if message.role == 'assistant' and message.content|length > 24 %}
+                      <details class="capture">
+                        <summary>存入资料库</summary>
+                        <form method="post" action="{% url 'projects:library_capture' project.pk message.pk %}">
+                          {% csrf_token %}
+                          <select name="kind" aria-label="资料类型">
+                            {% for value, label in kind_choices %}<option value="{{ value }}"{% if value == 'decision' %} selected{% endif %}>{{ label }}</option>{% endfor %}
+                          </select>
+                          <input name="title" maxlength="160" placeholder="标题（留空取第一行）">
+                          <button class="btn small" type="submit">保存</button>
+                        </form>
+                      </details>
+                    {% endif %}
+                    {% if message.draft_tasks %}
+                      <ul class="draft-list">
+                        {% for item in message.draft_preview|default:message.draft_tasks %}
+                          <li>
+                            <span class="draft-title">{{ item.title }}</span>
+                            <span class="draft-meta">{{ item.start_date|slice:"5:" }} 至 {{ item.end_date|slice:"5:" }}</span>
+                            {% if item.prerequisite_titles %}<span class="draft-dependencies">前置：{% for title in item.prerequisite_titles %}{{ title }}{% if not forloop.last %}；{% endif %}{% endfor %}</span>{% endif %}
+                          </li>
+                        {% endfor %}
+                      </ul>
+                      {% if message.applied_at %}
+                        <p class="draft-done">已写入任务树</p>
+                      {% elif can_edit %}
+                        <form method="post" action="{% url 'projects:draft_apply' project.pk message.pk %}">
+                          {% csrf_token %}
+                          <button class="btn primary small" type="submit">确认写入任务树</button>
+                        </form>
+                      {% endif %}
+                    {% endif %}
+                  </div>
+                </div>
+                {% endif %}
+              {% empty %}
+                {% if not pending_jobs %}
+                <div class="chat-empty">
+                  <p class="chat-empty-title">把要做的事说一句</p>
+                  <p class="hint">AI 会拆成任务、分配负责人和时间。例如：做一个登录模块和任务看板，两周内上线。</p>
+                </div>
+                {% endif %}
+              {% endfor %}
+              {% for job in pending_jobs %}
+                <div class="msg msg-assistant thinking" data-job="{{ job.pk }}">
+                  <span class="msg-avatar">…</span>
+                  <div class="bubble">
+                    <p class="bubble-name">{% if job.member %}{{ job.member.name }}{% if job.member.role %} · {{ job.member.role }}{% endif %}{% else %}多人讨论{% endif %}</p>
+                    <p class="bubble-text" data-job-answer>{% if job.status == 'queued' %}排队中，等待 worker 领取…{% elif job.partial_answer %}{{ job.partial_answer }}{% elif job.phase == 'thinking' %}正在思考…{% elif job.phase == 'planning' %}正在拆解任务…{% elif job.phase == 'proposal' or job.phase == 'review' or job.phase == 'decision' %}正在组织讨论…{% else %}正在连接模型…{% endif %}</p>
+                    <details class="reasoning" data-job-reasoning{% if job.partial_reasoning %} open{% else %} hidden{% endif %}>
+                      <summary>思考过程</summary>
+                      <div class="reasoning-body" data-job-reasoning-text data-raw="{{ job.partial_reasoning }}">{{ job.partial_reasoning|markdown }}</div>
+                    </details>
+                    <p class="job-meta" data-job-meta>{% if job.status == 'queued' %}排队中{% elif job.phase == 'thinking' %}思考中{% elif job.phase == 'answering' %}正在回答{% elif job.phase == 'planning' %}正在拆任务{% elif job.phase == 'proposal' %}提议中{% elif job.phase == 'review' %}评审中{% elif job.phase == 'decision' %}决策中{% else %}连接中{% endif %}</p>
+                    {% if can_edit %}
+                    <form method="post" action="{% url 'projects:job_cancel' project.pk job.pk %}">
+                      {% csrf_token %}
+                      <button class="btn small" type="submit">{% if job.status == 'queued' %}取消排队{% else %}停止{% endif %}</button>
+                    </form>
+                    {% endif %}
+                  </div>
+                </div>
+              {% endfor %}
+            </div>
+            {% if failed_jobs %}
+            <details class="workflow-panel">
+              <summary>最近失败的运行 · {{ failed_jobs|length }}</summary>
+              <p class="hint">不会自动重新调用模型。重试会重新执行任务，可能产生 API 费用。</p>
+              {% if can_edit %}
+              <form method="post" action="{% url 'projects:job_dismiss_all' project.pk %}" class="job-clear">
+                {% csrf_token %}
+                <button class="btn small" type="submit">全部忽略（清空这个列表）</button>
+              </form>
+              {% endif %}
+              {% for job in failed_jobs %}
+              <p>#{{ job.pk }} · {{ job.member.name|default:'团队讨论' }} · {{ job.error|default:'运行中断或失败'|truncatechars:160 }}</p>
+              {% if can_edit %}
+              <div class="job-actions">
+                <form method="post" action="{% url 'projects:job_retry' project.pk job.pk %}">{% csrf_token %}<button class="btn small" type="submit">手动重试 #{{ job.pk }}</button></form>
+                <form method="post" action="{% url 'projects:job_dismiss' project.pk job.pk %}">{% csrf_token %}<button class="btn small ghost" type="submit">忽略这条</button></form>
+              </div>
+              {% endif %}
+              {% endfor %}
+            </details>
+            {% endif %}
+            {% if ai_choice == 'all' %}
+              <p class="chat-mode-hint">这一轮按职责讨论：提议 至 评审 至 决策，每个 AI 按配置的讨论职责发言；只讨论，不生成任务草案。</p>
+            {% endif %}
+            {% if can_edit %}
+            <form class="chat-form" method="post" action="{% url 'projects:chat_send' project.pk %}">
+              {% csrf_token %}
+              <input type="hidden" name="submission_id" value="{{ submission_id }}">
+              <div class="composer">
+                <textarea name="message" rows="1" maxlength="2000" placeholder="说需求；输入 @ 或点「@成员」叫外部工具…" required aria-controls="mention-options" aria-autocomplete="list" aria-expanded="false" data-mention-input></textarea>
+                <div class="fuzzy-hint" data-fuzzy-hint hidden>
+                  <span>这句话有点模糊，要不要先确认提示词？</span>
+                  <button class="btn small" type="button" data-fuzzy-accept>先确认提示词</button>
+                  <button class="fuzzy-dismiss" type="button" data-fuzzy-dismiss>直接发</button>
+                </div>
+                <div class="mention-menu" data-mention-menu hidden>
+                  <ul class="mention-list" id="mention-options" data-mention-list role="listbox" aria-label="提及成员"></ul>
+                  <p class="mention-empty" data-mention-empty hidden>没有匹配的成员</p>
+                  <p class="mention-note">会写入对方收件箱；外部工具下次轮询时处理，AI 不会代答。</p>
+                </div>
+                <div class="composer-bar">
+                  <div class="composer-tools">
+                    <div class="mode-picker" data-mode-picker data-project="{{ project.pk }}">
+                      <input type="hidden" name="mode" value="chat" data-mode-input>
+                      <button class="mode-trigger" type="button" data-mode-trigger aria-haspopup="listbox" aria-expanded="false">
+                        <span data-mode-label>对话</span>
+                        <svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 6l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                      </button>
+                      <ul class="mode-menu" data-mode-menu role="listbox" hidden>
+                        <li role="option" data-value="chat" class="is-on">对话</li>
+                        <li role="option" data-value="plan">拆任务</li>
+                        <li role="option" data-value="kickoff">立项会</li>
+                        <li role="option" data-value="prompt">提示词</li>
+                        {% if not server_mode %}<li role="option" data-value="agent">Agent</li>{% endif %}
+                      </ul>
+                    </div>
+                    <button class="agent-toggle mention-toggle" type="button" data-mention-button title="插入成员提及，消息会进入对方收件箱">@成员</button>
+                    {% if ai_members %}
+                      <details class="ai-picker" data-ai-picker data-ai-cookie="ai_{{ project.pk }}">
+                        <summary class="ai-picker-button">
+                          <span data-ai-label>{{ ai_picker_label }}</span>
+                          <svg width="9" height="6" viewBox="0 0 10 6" aria-hidden="true"><path d="M1 1l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.4"/></svg>
+                        </summary>
+                        <div class="ai-picker-menu" role="listbox" aria-label="由谁回答">
+                          {% for ai in ai_members %}
+                            <label class="ai-option">
+                              <input type="radio" name="ai" value="{{ ai.pk }}"{% if ai_choice == ai.pk|stringformat:'s' %} checked{% endif %}>
+                              <span class="ai-option-text">{{ ai.name }}{% if ai.role %} · {{ ai.role }}{% endif %}</span>
+                            </label>
+                          {% endfor %}
+                          {% if ai_members|length > 1 %}
+                            <label class="ai-option">
+                              <input type="radio" name="ai" value="all"{% if ai_choice == 'all' %} checked{% endif %}>
+                              <span class="ai-option-text">讨论 · {{ ai_members|length }} 个 AI</span>
+                            </label>
+                          {% endif %}
+                        </div>
+                      </details>
+                    {% endif %}
+                  </div>
+                  <button class="send-btn" type="submit" aria-label="发送" title="发送（Enter）">
+                    <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
+                      <path d="M8 13V3M8 3l-4 4M8 3l4 4" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                  </button>
+                </div>
+              </div>
+            </form>
+            {{ mention_candidates|json_script:"mention-candidates" }}
+            {% else %}
+              <p class="hint chat-readonly">你是只读成员，可以查看对话、任务和资料，不能发送消息。</p>
+            {% endif %}
+          </div>
+
+        {% elif tab == 'library' %}
+          {% if selected_entry %}
+            <div class="toolbar">
+              <div class="tree-tools">
+                <a class="btn small" href="?tab=library&amp;focusEntry={{ selected_entry.pk }}{% if kind_filter %}&amp;kind={{ kind_filter }}{% endif %}" data-library-close>{% include 'projects/_icon.html' with name='back' %} 返回资料库</a>
+                <button class="btn small reader-settings-toggle" type="button" data-reader-settings-toggle aria-controls="reader-settings" aria-expanded="false">记录信息</button>
+                <span class="badge-soft">{{ selected_entry.kind_label }}</span>
+              </div>
+              {% if can_edit %}<a class="btn small" href="{% url 'projects:library_edit' project.pk selected_entry.pk %}">编辑条目</a>{% endif %}
+            </div>
+            <div class="panel panel-library panel-reader">
+              <article class="task-reader" data-library-reader tabindex="-1" aria-labelledby="library-detail-title">
+                <h2 class="reader-title" id="library-detail-title">{{ selected_entry.title }}</h2>
+                {% if selected_entry.summary %}<p class="reader-lead">{{ selected_entry.summary }}</p>{% endif %}
+                <p class="reader-meta">{{ selected_entry.kind_label }} · 记录 {{ selected_entry.created_at|date:"Y-m-d H:i" }} · 更新 {{ selected_entry.updated_at|date:"Y-m-d" }}{% if selected_entry.task %} · 关联任务 {{ selected_entry.task.title }}{% endif %}</p>
+
+                <section class="reader-section">
+                  <h3>内容</h3>
+                  <p class="reader-text">{{ selected_entry.body|default:"还没有写内容。"|linebreaksbr }}</p>
+                </section>
+                {% if selected_entry.context %}
+                  <section class="reader-section">
+                    <h3>背景 / 约束来源</h3>
+                    <p class="reader-text">{{ selected_entry.context|linebreaksbr }}</p>
+                  </section>
+                {% endif %}
+                {% if selected_entry.options %}
+                  <section class="reader-section">
+                    <h3>备选方案</h3>
+                    <p class="reader-text">{{ selected_entry.options|linebreaksbr }}</p>
+                  </section>
+                {% endif %}
+                {% if selected_entry.conclusion %}
+                  <section class="reader-section">
+                    <h3>结论 / 落地方式</h3>
+                    <p class="reader-text">{{ selected_entry.conclusion|linebreaksbr }}</p>
+                  </section>
+                {% endif %}
+                <dl class="reader-facts">
+                  <div><dt>类型</dt><dd>{{ selected_entry.kind_label }}</dd></div>
+                  <div><dt>来源</dt><dd>{{ selected_entry.get_source_display }}{% if selected_entry.source_ref %} · {{ selected_entry.source_ref }}{% endif %}</dd></div>
+                  <div><dt>版本</dt><dd>v{{ selected_entry.version }}{% if not selected_entry.is_active %} · 已停用{% endif %}</dd></div>
+                </dl>
+                {% if selected_entry.tag_list %}
+                  <div class="tag-row">{% for tag in selected_entry.tag_list %}<span class="tag">{{ tag }}</span>{% endfor %}</div>
+                {% endif %}
+              </article>
+            </div>
+          {% else %}
+          <div class="toolbar">
+            <span class="hint">规则、产物、决策都记在这里；任务树只放任务。</span>
+            <div class="toolbar-right">
+              <form class="filter" method="get">
+                <input type="hidden" name="tab" value="library">
+                <input class="filter-search" type="search" name="q" value="{{ query }}" placeholder="搜标题 / 正文 / 标签">
+                <select name="kind" data-auto-submit aria-label="按类型筛选">
+                  <option value="">全部类型</option>
+                  {% for value, label in kind_choices %}
+                    <option value="{{ value }}"{% if kind_filter == value %} selected{% endif %}>{{ label }}</option>
+                  {% endfor %}
+                </select>
+              </form>
+              <details class="add">
+                <summary class="btn">{% include 'projects/_icon.html' with name='plus' %} 新增条目</summary>
+                <form class="add-panel" method="post" action="{% url 'projects:library_add' project.pk %}">
+                  {% csrf_token %}
+                  <label for="lib-kind">类型</label>
+                  <select id="lib-kind" name="kind">
+                    {% for value, label in kind_choices %}<option value="{{ value }}">{{ label }}</option>{% endfor %}
+                  </select>
+                  <label for="lib-title">标题</label>
+                  <input id="lib-title" name="title" maxlength="160" placeholder="例如：登录接口约定" required>
+                  <label for="lib-body">内容</label>
+                  <textarea id="lib-body" name="body" rows="4" placeholder="写清约束、结论或产物位置"></textarea>
+                  <label for="lib-task">关联任务（可选）</label>
+                  <select id="lib-task" name="task">
+                    <option value="">不关联</option>
+                    {% for task in tasks %}<option value="{{ task.pk }}">{{ task.title }}</option>{% endfor %}
+                  </select>
+                  <button class="btn primary small" type="submit">保存</button>
+                </form>
+              </details>
+            </div>
+          </div>
+          <div class="panel panel-library">
+            <div class="table">
+              <div class="table-head">
+                <span>名称</span><span>类型</span><span>更新时间</span><span>关联任务</span>
+              </div>
+              {% for entry in library_visible %}
+                <div class="row-wrap">
+                  <a class="table-row" data-entry-id="{{ entry.pk }}" href="?tab=library&amp;entry={{ entry.pk }}{% if kind_filter %}&amp;kind={{ kind_filter }}{% endif %}">
+                    <span class="cell-name"><span class="doc-icon kind-{{ entry.kind }}" aria-hidden="true"></span><span class="cell-title">{{ entry.title }}</span>{% for tag in entry.tag_list %}<span class="tag">{{ tag }}</span>{% endfor %}</span>
+                    <span class="cell">{{ entry.get_kind_display }}</span>
+                    <span class="cell">{{ entry.created_at|date:"Y/m/d" }}</span>
+                    <span class="cell">{% if entry.task %}{{ entry.task.title }}{% else %}—{% endif %}</span>
+                  </a>
+                  <form class="row-del" method="post" action="{% url 'projects:library_delete' project.pk entry.pk %}" data-confirm="删除资料「{{ entry.title }}」？删除后无法恢复。">
+                    {% csrf_token %}
+                    <button class="row-del-btn" type="submit" aria-label="删除" title="删除">{% include 'projects/_icon.html' with name='close' %}</button>
+                  </form>
+                </div>
+              {% empty %}
+                <div class="table-empty">
+                  <p>这里还没有内容</p>
+                  <p class="hint">用右上角「新增条目」记下第一条规则、产物或决策。</p>
+                </div>
+              {% endfor %}
+            </div>
+          </div>
+          {% endif %}
+
+        {% elif tab == 'progress' %}
+          {% include 'projects/_progress.html' %}
+        {% else %}
+          {% if selected %}
+            <div class="toolbar">
+              <div class="tree-tools">
+                <a class="btn small" href="?tab=tasks&amp;view={{ task_view }}&amp;focus={{ selected.pk }}" data-task-close>{% include 'projects/_icon.html' with name='back' %} 返回任务树</a>
+                <a class="btn small" href="?tab=tasks&amp;chain={{ selected.pk }}">依赖链路</a>
+                <button class="btn small reader-settings-toggle" type="button" data-reader-settings-toggle aria-controls="reader-settings" aria-expanded="false">{% if can_edit %}任务设置{% else %}任务信息{% endif %}</button>
+                <span class="badge-soft">{{ selected.get_status_display }}</span>
+              </div>
+              {% if can_edit %}<span class="hint">正文为只读，负责人、状态和验收条件在设置区域修改。</span>{% endif %}
+            </div>
+            <div class="panel panel-tree panel-reader">
+              <article class="task-reader" data-task-reader data-task-id="{{ selected.pk }}" tabindex="-1" aria-labelledby="task-detail-title">
+                <h2 class="reader-title" id="task-detail-title">{{ selected.title }}</h2>
+                <p class="reader-meta">{{ selected.readable.label }} · 优先级 {{ selected.get_priority_display }} · 负责人 {% if selected.assignee %}{{ selected.assignee.name }}{% else %}未分配{% endif %} · {% if selected.start_date %}{{ selected.start_date|date:"Y-m-d" }}{% else %}还没安排开始时间{% endif %} 至 {% if selected.end_date %}{{ selected.end_date|date:"Y-m-d" }}{% else %}还没安排完成时间{% endif %}</p>
+                {% if can_edit %}
+                <form class="status-switch" method="post" action="{% url 'projects:task_status' project.pk selected.pk %}">
+                  {% csrf_token %}
+                  <button class="{% if selected.status == 'todo' %}is-on{% endif %}" name="status" value="todo" type="submit">待开始</button>
+                  <button class="{% if selected.status == 'doing' %}is-on{% endif %}" name="status" value="doing" type="submit">进行中</button>
+                  {% if not selected_delivery %}<button class="{% if selected.status == 'done' %}is-on{% endif %}" name="status" value="done" type="submit">已完成</button>{% else %}<a class="btn small" href="{% url 'projects:task_delivery' project.pk selected.pk %}">查看交付并确认</a>{% endif %}
+                  <span class="hint">受阻请用下方的原因表单。</span>
+                </form>
+                {% if selected_is_archived %}
+                <form method="post" action="{% url 'projects:task_restore' project.pk selected.pk %}" style="margin-top:8px">
+                  {% csrf_token %}
+                  <button class="btn small" type="submit">从归档恢复</button>
+                </form>
+                {% else %}
+                <form method="post" action="{% url 'projects:task_archive' project.pk selected.pk %}" style="margin-top:8px" data-confirm="把「{{ selected.title }}」移到归档？之后可在「显示已归档」里恢复。">
+                  {% csrf_token %}
+                  <button class="btn small" type="submit">归档这项任务</button>
+                </form>
+                {% endif %}
+                {% endif %}
+                {% include 'projects/_task_reasons.html' with task=selected %}
+                {% include 'projects/_task_plain.html' with task=selected %}
+                <details class="reader-technical">
+                  <summary>技术要求与原始任务包（执行时查看）</summary>
+
+                <section class="reader-section">
+                  <h3>工作内容</h3>
+                  <p class="reader-text">{{ selected.detail|default:"还没有填写工作内容。"|linebreaksbr }}</p>
+                </section>
+
+                <section class="reader-section">
+                  <h3>验收条件</h3>
+                  <p class="reader-text">{% if selected.acceptance %}{{ selected.acceptance|linebreaksbr }}{% else %}还没有填写。交付时按这里核对证据。{% endif %}</p>
+                </section>
+
+                <section class="reader-section">
+                  <h3>前置与层级</h3>
+                  {% if selected.parent or selected_children %}
+                    <ul class="reader-links">
+                      {% if selected.parent %}<li>上级任务：<a href="?tab=tasks&amp;task={{ selected.parent.pk }}">{{ selected.parent.title }}</a></li>{% endif %}
+                      {% for child in selected_children %}<li>子任务：<a href="?tab=tasks&amp;task={{ child.pk }}">{{ child.title }}</a></li>{% endfor %}
+                    </ul>
+                  {% else %}
+                    <p class="reader-text muted">没有上级或子任务。</p>
+                  {% endif %}
+                  <p class="reader-note">前置条件和处理办法在上方单独列出。父子层级表示任务拆分；真实前置关系用于开工校验，自动派发尚未开启。</p>
+                </section>
+
+                <section class="reader-section">
+                  <h3>执行范围与技术信息</h3>
+                  {% if selected_package.configured %}
+                    <dl class="reader-facts">
+                      <div><dt>任务类型</dt><dd>{{ selected_package.work_kind_label }}</dd></div>
+                      <div><dt>风险</dt><dd>{{ selected_package.risk_label }}</dd></div>
+                      <div><dt>工作区</dt><dd><code>{{ selected_package.workspace_key|default:"—" }}</code></dd></div>
+                      <div><dt>基准版本</dt><dd>{% if selected_package.baseline %}<code class="reader-code-wrap">{{ selected_package.baseline }}</code>{% else %}—{% endif %}</dd></div>
+                      <div><dt>上下文版本</dt><dd>r{{ project.context_revision }}</dd></div>
+                    </dl>
+                    {% if selected_package.allowed_paths %}
+                      <p class="reader-sub">允许修改</p>
+                      <ul class="reader-paths">{% for path in selected_package.allowed_paths %}<li><code>{{ path }}</code></li>{% endfor %}</ul>
+                    {% endif %}
+                    {% if selected_package.relevant_files %}
+                      <p class="reader-sub">相关文件</p>
+                      <ul class="reader-paths">{% for path in selected_package.relevant_files %}<li><code>{{ path }}</code></li>{% endfor %}</ul>
+                    {% endif %}
+                    {% if selected_package.check_commands %}
+                      <p class="reader-sub">检查命令</p>
+                      <pre class="reader-cmd">{% for command in selected_package.check_commands %}{{ command }}
+{% endfor %}</pre>
+                    {% endif %}
+                  {% else %}
+                    <p class="reader-text muted">这个任务没有登记任务包；简单任务可以不填，交付时以验收条件为准。</p>
+                  {% endif %}
+                </section>
+
+                </details>
+                <section class="reader-section">
+                  <h3>交付与验收</h3>
+                    <p class="reader-text">{% if selected_delivery %}最近一次交付：{{ selected_delivery.get_status_display }} · {{ selected_delivery.created_at|date:"Y-m-d H:i" }}{% else %}还没有交付记录。{% endif %}</p>
+                    <a class="btn primary" href="{% url 'projects:task_delivery' project.pk selected.pk %}">交付与验收记录</a>
+                </section>
+              </article>
+            </div>
+          {% else %}
+            {% if can_edit %}
+
+            {% endif %}
+          <div class="toolbar task-filter-toolbar">
+            <p class="hint">{% if filtering_tasks %}筛选中：{{ visible_total }} 项{% else %}按标题 / 状态 / 负责人过滤任务{% endif %}</p>
+            <form class="filter" method="get">
+              <input type="hidden" name="tab" value="tasks">
+              {% if show_archive %}<input type="hidden" name="archive" value="1">{% endif %}
+              <input class="filter-search" type="search" name="q" value="{{ task_query }}" placeholder="搜任务标题 / 内容">
+              <select name="status" data-auto-submit aria-label="按状态筛选">
+                <option value="">全部状态</option>
+                {% for value, label in status_choices %}<option value="{{ value }}"{% if task_status == value %} selected{% endif %}>{{ label }}</option>{% endfor %}
+              </select>
+              <select name="assignee" data-auto-submit aria-label="按负责人筛选">
+                <option value="">全部负责人</option>
+                {% for member in assignee_options %}<option value="{{ member.pk }}"{% if assignee_filter == member.pk|stringformat:'s' %} selected{% endif %}>{{ member.name }}</option>{% endfor %}
+              </select>
+              {% if filtering_tasks %}<a class="btn small" href="?tab=tasks{% if show_archive %}&amp;archive=1{% endif %}">清除</a>{% endif %}
+            </form>
+          </div>
+          {% if task_view == 'outline' %}
+            <div class="toolbar task-outline-toolbar">
+              <p class="hint">先看要做什么；展开一项，看步骤、卡点和完成标准。</p>
+              <a class="btn small" href="?tab=tasks&amp;view=graph{% if show_archive %}&amp;archive=1{% endif %}">切换到连线图</a>
+              {% if archived_total %}<a class="btn small" href="?tab=tasks{% if not show_archive %}&amp;archive=1{% endif %}">{% if show_archive %}隐藏归档{% else %}显示已归档 {{ archived_total }}{% endif %}</a>{% endif %}
+            </div>
+            <div class="panel panel-task-outline" data-task-outline>
+              {% for branch in task_branches %}{% include 'projects/_task_branch.html' with branch=branch %}{% empty %}<p class="task-outline-empty">还没有任务。先在对话中说明要做什么，再确认拆分结果。</p>{% endfor %}
+            </div>
+          {% elif task_view == 'timeline' %}
+          <div class="timeline-legend">
+            <span><i class="dot dot-todo"></i>待开始</span>
+            <span><i class="dot dot-doing"></i>进行中</span>
+            <span><i class="dot dot-done"></i>已完成</span>
+            <span><i class="dot dot-blocked"></i>受阻</span>
+          </div>
+          {% if chain_view %}
+            <div class="chain-bar">
+              <span class="chain-bar-title">依赖链路 · {{ chain_view.focus_task.title }}</span>
+              <span class="chain-bar-meta">上游 {{ chain_view.upstream|length }} 个 · 下游 {{ chain_view.downstream|length }} 个</span>
+              <a class="chain-clear" href="?tab=tasks">关闭</a>
+            </div>
+          {% endif %}
+          <div class="timeline">
+            {% for col in timeline %}
+              <section class="stage">
+                <svg class="stage-frame" aria-hidden="true"><rect x="0" y="0" width="100%" height="100%" rx="14" ry="14"/></svg>
+                <header class="stage-head">
+                  <span class="stage-name">{{ col.stage.title }}</span>
+                  <span class="stage-meta"><span class="stage-rollup">{{ col.status_label }}</span> · {{ col.done_count }}/{{ col.total_count }}{% if col.stage.assignee %} · {{ col.stage.assignee.short_name }}{% endif %}</span>
+                </header>
+                <div class="stage-body">
+                  {% for task in col.items %}
+                    <a class="stage-task is-{{ task.status }}{% if chain_view %} {% if task.pk == chain_view.focus %}chain-focus{% elif task.pk in chain_view.upstream %}chain-up{% elif task.pk in chain_view.downstream %}chain-down{% endif %}{% endif %}" href="?tab=tasks&amp;task={{ task.pk }}">
+                      <span class="st-title">{{ task.title }}</span>
+                      <span class="st-detail">{{ task.detail|truncatechars:64 }}</span>
+                      <span class="st-meta">{% if task.pending_delivery %}<span class="st-review">待验收</span>{% endif %}<span class="st-status">{{ task.get_status_display }}</span> · {{ task.assignee.short_name|default:'未分配' }}{% if task.end_date %} · {{ task.end_date|date:'m-d' }}{% endif %}{% if chain_view %}{% if task.pk == chain_view.focus %}<span class="chain-tag">聚焦</span>{% elif task.pk in chain_view.upstream %}<span class="chain-tag">上游</span>{% elif task.pk in chain_view.downstream %}<span class="chain-tag">下游</span>{% endif %}{% endif %}</span>
+                    </a>
+                  {% empty %}
+                    <p class="hint">暂无子任务</p>
+                  {% endfor %}
+                </div>
+              </section>
+            {% endfor %}
+          </div>
+          {% else %}
+          <div class="panel panel-tree">
+            <div class="tree-zoom" data-zoom-controls data-zoom-key="tree-zoom-{{ project.pk }}">
+              <button class="zoom-btn" type="button" data-zoom-out aria-label="缩小">−</button>
+              <span class="zoom-label" data-zoom-label>100%</span>
+              <button class="zoom-btn" type="button" data-zoom-in aria-label="放大">{% include 'projects/_icon.html' with name='plus' %}</button>
+              <button class="zoom-btn zoom-fit" type="button" data-zoom-fit>适应</button>
+            </div>
+            {% if tree.nodes %}
+              <div class="tree-scroll">
+                <div class="tree-canvas" style="width:{{ tree.width }}px;height:{{ tree.height }}px">
+                  <svg class="tree-links" width="{{ tree.width }}" height="{{ tree.height }}" aria-hidden="true">
+                    {% for points in tree.links %}
+                      <polyline class="link" points="{{ points }}"/>
+                    {% endfor %}
+                  </svg>
+                  {% for col in tree.columns %}
+                    <span class="tree-step" style="left:{{ col.x|floatformat:'0' }}px;top:{{ tree.step_y }}px">第 {{ col.step }} 步</span>
+                    <div class="tree-col" style="left:{{ col.x|floatformat:'0' }}px;top:{{ col.y|floatformat:'0' }}px;width:{{ col.w|floatformat:'0' }}px;height:{{ col.h|floatformat:'0' }}px"></div>
+                  {% endfor %}
+                  {% for node in tree.nodes %}
+                    <a class="node node-{{ node.task.status }} node-state-{{ node.task.readable.tone }}{% if selected and selected.pk == node.task.pk %} is-selected{% endif %}"
+                       href="?tab=tasks&amp;view=graph&amp;task={{ node.task.pk }}"
+                       data-task-id="{{ node.task.pk }}"
+                       style="left:{{ node.x|floatformat:'0' }}px;top:{{ node.y|floatformat:'0' }}px;width:{{ node_w }}px;min-height:{{ node.h }}px;--i:{{ forloop.counter0 }}">
+                      <span class="node-top"><span class="node-dot"></span><span class="node-title">{{ node.task.title }}</span></span>
+                      <span class="node-meta">{{ node.task.assignee.name|default:"未分配" }}{% if node.task.end_date %} · {{ node.task.end_date|date:"m-d" }}{% endif %}</span>
+                      <span class="node-status">{{ node.task.readable.label }}</span>
+                      <span class="node-tip">
+                        <span class="tip-title">{{ node.task.title }}</span>
+                        <span class="tip-row">负责人：{{ node.task.assignee.name|default:"未分配" }}</span>
+                        <span class="tip-row">状态：{{ node.task.readable.label }}</span>
+                        {% if node.task.start_date or node.task.end_date %}<span class="tip-row">日期：{{ node.task.start_date|date:"Y-m-d"|default:"未定" }} 至 {{ node.task.end_date|date:"Y-m-d"|default:"未定" }}</span>{% endif %}
+                        <span class="tip-purpose">{{ node.task.readable.summary }}</span>
+                        {% if node.task.readable.primary %}<span class="tip-blocker">{{ node.task.readable.primary.text }}</span>{% endif %}
+                      </span>
+                    </a>
+                  {% endfor %}
+                  <div class="node node-goal" style="left:{{ tree.goal.x|floatformat:'0' }}px;top:{{ tree.goal.y|floatformat:'0' }}px;width:{{ node_w }}px;min-height:{{ tree.goal.h }}px">
+                    <span class="node-top"><span class="node-dot"></span><span class="node-title">{{ project.goal_title }}</span></span>
+                    <span class="node-meta">目标{% if project.goal_deadline %} · {{ project.goal_deadline|date:"m-d" }}{% endif %}</span>
+                    <span class="node-status">{{ percent }}% 完成</span>
+                  </div>
+                </div>
+              </div>
+            {% else %}
+              <div class="tree-empty">
+                <p class="tree-empty-title">还没有任务</p>
+                <p class="hint">去对话里说一句需求，确认 AI 的拆分后任务会出现在这里。</p>
+                <a class="btn primary" href="?tab=chat">去对话提需求</a>
+              </div>
+            {% endif %}
+          </div>
+          {% endif %}
+          {% endif %}
+        {% endif %}
+
+      </section>
+
+      {% if server_mode or selected or selected_entry %}<aside class="inspector"{% if selected or selected_entry %} id="reader-settings"{% endif %}>
+        {% if tab == 'library' %}
+          {% if selected_entry %}
+            <p class="insp-label">{{ selected_entry.kind_label }}</p>
+            <h2 class="insp-title">{{ selected_entry.title }}</h2>
+            {% if selected_entry.summary %}<p class="insp-lead">{{ selected_entry.summary }}</p>{% endif %}
+            <p class="insp-text muted">完整内容在左侧只读详情里；这里保留记录信息与编辑入口。</p>
+            <dl class="facts">
+              <div><dt>类型</dt><dd>{{ selected_entry.kind_label }}</dd></div>
+              <div><dt>记录</dt><dd>{{ selected_entry.created_at|date:"Y-m-d H:i" }}</dd></div>
+              <div><dt>关联任务</dt><dd>{% if selected_entry.task %}{{ selected_entry.task.title }}{% else %}未关联{% endif %}</dd></div>
+              <div><dt>来源</dt><dd>{{ selected_entry.get_source_display }}{% if selected_entry.source_ref %} · {{ selected_entry.source_ref }}{% endif %}</dd></div>
+            </dl>
+            {% if selected_entry.tag_list %}
+              <div class="tag-row">{% for tag in selected_entry.tag_list %}<span class="tag">{{ tag }}</span>{% endfor %}</div>
+            {% endif %}
+            {% if can_edit %}<p style="margin-top:14px"><a class="btn small" href="{% url 'projects:library_edit' project.pk selected_entry.pk %}">编辑条目</a></p>{% endif %}
+          {% else %}
+            <p class="insp-label">资料库</p>
+            <h2 class="insp-title">规则、产物与决策</h2>
+            <p class="insp-text">把「为什么这么定」和「做出来的东西在哪」记在这里，别散在对话里。</p>
+            <dl class="facts">
+              {% for group in library_groups %}
+                <div><dt>{{ group.label }}</dt><dd>{{ group.entries|length }} 条</dd></div>
+              {% endfor %}
+            </dl>
+            <p class="insp-text muted">点左边任意一行看详情。</p>
+          {% endif %}
+        {% elif selected %}
+          <p class="insp-label">任务</p>
+          <h2 class="insp-title">{{ selected.title }}</h2>
+          <dl class="facts">
+            <div><dt>负责人</dt><dd>{% if selected.assignee %}{{ selected.assignee.name }}{% else %}未分配{% endif %}</dd></div>
+            <div><dt>时间</dt><dd>{% if selected.start_date %}{{ selected.start_date|date:"m-d" }}{% else %}—{% endif %} 至 {% if selected.end_date %}{{ selected.end_date|date:"m-d" }}{% else %}—{% endif %}</dd></div>
+            <div><dt>状态</dt><dd>{{ selected.readable.label }}</dd></div>
+            <div><dt>优先级</dt><dd>{{ selected.get_priority_display }}</dd></div>
+          </dl>
+          <p class="insp-text muted">完整内容在左侧只读详情里；这里只留负责人、状态与验收编辑。</p>
+          {% if can_edit %}
+          {% if can_manage %}
+          <details class="acceptance-edit">
+            <summary class="btn small">编辑验收条件</summary>
+            <form method="post" action="{% url 'projects:task_acceptance' project.pk selected.pk %}">
+              {% csrf_token %}
+              <textarea name="acceptance" rows="4" placeholder="例如：测试通过；改动文件与命令输出齐全">{{ selected.acceptance }}</textarea>
+              <button class="btn small" type="submit">保存</button>
+            </form>
+          </details>
+          <p class="insp-label">改负责人</p>
+          <form class="assign-form" method="post" action="{% url 'projects:task_assign' project.pk selected.pk %}">
+            {% csrf_token %}
+            <select name="assignee" data-auto-submit aria-label="负责人">
+              <option value="">未分配</option>
+              {% for member in members %}
+                <option value="{{ member.pk }}"{% if selected.assignee_id == member.pk %} selected{% endif %}>{{ member.name }}{% if member.kind == 'external' %}（外部）{% endif %}</option>
+              {% endfor %}
+            </select>
+          </form>
+          <p class="insp-label">改状态</p>
+          {% endif %}
+          <form class="status-form" method="post" action="{% url 'projects:task_status' project.pk selected.pk %}">
+            {% csrf_token %}
+            {% for value, label in status_choices %}
+              {% if value != 'blocked' %}{% if value != 'done' or not selected_delivery %}{% if not server_mode or value != 'done' %}
+              <button type="submit" name="status" value="{{ value }}" class="status-btn{% if selected.status == value %} is-on{% endif %}">{{ label }}</button>
+              {% endif %}{% endif %}{% endif %}
+            {% endfor %}
+          </form>
+          <details class="task-block-edit"{% if selected.status == 'blocked' %} open{% endif %}>
+            <summary>填写受阻原因或处理办法</summary>
+            <form method="post" action="{% url 'projects:task_status' project.pk selected.pk %}">
+              {% csrf_token %}<input type="hidden" name="status" value="blocked">
+              <label>具体卡在哪里<textarea name="blocked_reason" rows="3" required maxlength="8000" placeholder="例如：登录接口还没有完成，页面暂时无法验证成功和失败。">{{ selected.blocked_reason }}</textarea></label>
+              <label>需要谁做什么，才能继续<textarea name="unblock_action" rows="3" required maxlength="8000" placeholder="例如：Codex先完成第51项登录接口，WorkBuddy再接入并验证页面。">{{ selected.unblock_action }}</textarea></label>
+              <button class="btn small" type="submit">保存原因和处理办法</button>
+            </form>
+          </details>
+          {% endif %}
+        {% else %}
+          <p class="insp-label">目标</p>
+          <h2 class="insp-title">{{ project.goal_title }}</h2>
+          <p class="insp-text">{{ project.goal_detail|default:"还没有目标说明。"|linebreaksbr }}</p>
+          <dl class="facts">
+            <div><dt>截止</dt><dd>{% if project.goal_deadline %}{{ project.goal_deadline|date:"Y-m-d" }}{% else %}未设置{% endif %}</dd></div>
+            <div><dt>任务</dt><dd>{{ total }} 个，完成 {{ done }} 个</dd></div>
+            <div><dt>团队</dt><dd>{{ members|length }} 人</dd></div>
+          </dl>
+          {% if tab == 'chat' %}
+            <p class="insp-label">怎么用</p>
+            <ul class="tips">
+              <li>说需求，AI 拆成草案。</li>
+              <li>确认后进任务树，不会直接落库。</li>
+              <li>树上点节点改负责人和状态。</li>
+            </ul>
+          {% else %}
+            <p class="insp-label">怎么看这棵树</p>
+            <ul class="tips">
+              <li>右端是目标，越往左越细。</li>
+              <li>点任意节点看负责人、时间和内容。</li>
+              <li>对话里提需求，确认后才进树。</li>
+            </ul>
+          {% endif %}
+        {% endif %}
+      </aside>{% endif %}
+    </div>
+  </div>
+
+</div>
+{% endblock %}

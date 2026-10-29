@@ -1,0 +1,55 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}本机 Agent · WorkRoom{% endblock %}
+{% block body_class %}page-index{% endblock %}
+{% block content %}
+<div class="shell shell-index">
+
+  <header class="topbar">
+    <a class="brand" href="{% url 'projects:index' %}"><img src="{% static 'workroom/favicon.svg' %}" width="18" height="18" alt="">WorkRoom</a>
+    <a class="rail-back" href="{% url 'projects:space' project.pk %}">{% include 'projects/_icon.html' with name='back' %}返回项目</a>
+  </header>
+
+  <main class="index index-narrow">
+    <div class="index-head">
+      <h1>本机 Agent</h1>
+      <p class="hint">检测这台电脑上装了哪些客户端，以及自动回复桥接是否在跑。这里只读，不改任何配置。</p>
+    </div>
+
+    <section class="settings-card">
+      <p class="form-section">检测结果</p>
+      <table class="conn-table">
+        <tbody>
+          <tr>
+            <th>Codex</th>
+            <td>{% if local.codex %}<span class="ok">已安装</span><br><code>{{ local.codex }}</code>{% else %}<span class="err">未安装</span>{% endif %}</td>
+          </tr>
+          <tr>
+            <th>WorkBuddy CLI</th>
+            <td>{% if local.codebuddy %}<span class="ok">已安装</span><br><code>{{ local.codebuddy }}</code>{% else %}<span class="err">未安装</span>{% endif %}</td>
+          </tr>
+          <tr>
+            <th>A2A-Hub</th>
+            <td>{% if local.a2a %}<span class="ok">已找到</span> <code>D:\A2A-Hub</code>{% else %}<span class="err">未找到</span>{% endif %}</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="settings-card">
+      <p class="form-section">自动回复</p>
+      {% for b in local.bridges %}
+        <p><span class="{% if b.online %}ok{% else %}err{% endif %}">{% if b.online %}在线{% else %}离线{% endif %}</span> · {{ b.member }} 映射到 {{ b.agent }}</p>
+        <p class="hint">最后活动：{{ b.updated_at }}{% if b.last %} · {{ b.last }}{% endif %}</p>
+      {% empty %}
+        <p><span class="err">离线</span> · 还没有桥接在跑</p>
+      {% endfor %}
+      <p class="hint">启动后会每 20 秒取一次件。在项目目录运行：</p>
+      <pre class="cmd-block">.venv\Scripts\python.exe .tools\agent_bridge.py --project {{ project.pk }} --member Codex --agent codex</pre>
+      <p class="hint">或双击 <code>Startup\WorkRoom Agents.cmd</code>（开机自启已安装）。</p>
+    </section>
+
+    <p class="hint"><a href="{% url 'projects:connections' project.pk %}">管理工具连接{% include 'projects/_icon.html' with name='arrow' %}</a></p>
+  </main>
+</div>
+{% endblock %}

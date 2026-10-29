@@ -1,0 +1,34 @@
+<section class="onboarding" data-onboarding aria-labelledby="onboarding-title">
+  <div class="onboarding-intro">
+    <p class="onboarding-eyebrow">你的第一个项目</p>
+    <h1 id="onboarding-title">先确定一件要完成的事</h1>
+    <p class="onboarding-lead">把想法、任务和结果放在一起，从一个清楚的目标开始。</p>
+    <ol class="onboarding-steps" aria-label="开始步骤">
+      <li><span aria-hidden="true">1</span>写下项目和目标</li>
+      <li><span aria-hidden="true">2</span>选择身份，也可稍后补充</li>
+      <li><span aria-hidden="true">3</span>进入项目，安排第一项任务</li>
+    </ol>
+    <p class="hint onboarding-local-note">无需注册。项目保存在这台电脑上，AI 可在进入项目后连接。</p>
+  </div>
+
+  <form method="post" class="onboarding-form" aria-label="创建第一个项目">
+    {% csrf_token %}
+    {% if error %}<p class="error" role="alert" id="onboarding-error">{{ error }}</p>{% endif %}
+    <label for="onboarding-name">项目名称</label>
+    <input id="onboarding-name" name="name" value="{{ entered_name }}" maxlength="120" placeholder="例如：我的作品集网站" required autocomplete="off"{% if error %} aria-describedby="onboarding-error"{% endif %}>
+
+    <label for="onboarding-goal">这次想交付什么</label>
+    <textarea id="onboarding-goal" name="goal" rows="3" maxlength="200" required placeholder="例如：做一个能展示三个作品、带联系方式的网站。" aria-describedby="onboarding-goal-help">{{ entered_goal }}</textarea>
+    <p class="hint" id="onboarding-goal-help">写具体结果即可，后面可以修改，不必现在列完所有功能。</p>
+
+    <label for="onboarding-role">你的身份 <span class="muted">（选填）</span></label>
+    <select id="onboarding-role" name="onboarding_role" aria-describedby="onboarding-role-help">
+      <option value=""{% if not entered_role %} selected{% endif %}>稍后再选身份</option>
+      {% for value, label in onboarding_roles %}<option value="{{ value }}"{% if entered_role == value %} selected{% endif %}>{{ label }}</option>{% endfor %}
+    </select>
+    <p class="hint" id="onboarding-role-help">AI 会参考身份调整说明和拆分视角。稍后可在“我的身份”修改；跳过会保留已有设置。</p>
+
+    <button class="btn primary" type="submit">创建并进入项目</button>
+    <p class="onboarding-submit-note">创建项目不会调用 AI，也不需要填写 Key。</p>
+  </form>
+</section>

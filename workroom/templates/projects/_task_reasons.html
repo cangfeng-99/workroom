@@ -1,0 +1,8 @@
+{% if task.readable.blockers %}
+  <section class="task-reasons" aria-label="为什么现在不能开始">
+    <h3>{% if task.readable.primary.kind == 'returned' %}上次退回需要改什么{% else %}为什么现在不能开始{% endif %}</h3>
+    <ul>{% for blocker in task.readable.blockers %}
+      <li><p>{{ blocker.text }}</p>{% if blocker.task_id %}<a href="?tab=tasks&amp;task={{ blocker.task_id }}">查看这项前置任务</a>{% endif %}<p class="task-next-action">{{ blocker.action }}</p></li>
+    {% endfor %}</ul>
+  </section>
+{% endif %}

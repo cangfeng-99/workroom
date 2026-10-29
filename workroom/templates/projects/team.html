@@ -1,0 +1,139 @@
+{% extends 'projects/settings_shell.html' %}
+{% block title %}团队与接入 · {{ project.name }}{% endblock %}
+{% block manage_content %}
+    <header class="manage-heading"><h1>团队成员</h1><p>邀请伙伴加入，按项目角色协作。AI工具在“工具连接”中接入。</p></header>
+
+    {% if error %}<p class="error">{{ error }}</p>{% endif %}
+
+    {% if new_invite_url %}
+      <div class="notice">
+        <p><strong>邀请链接（只显示这一次，复制给成员）：</strong></p>
+        <p><input class="wide-input" value="{{ new_invite_url }}" readonly onclick="this.select()"></p>
+      </div>
+    {% endif %}
+    {% if new_token %}
+      <div class="notice">
+        <p><strong>工具令牌（只显示这一次，写进外部工具的 WORKROOM_ACCESS_TOKEN）：</strong></p>
+        <p><input class="wide-input" value="{{ new_token }}" readonly onclick="this.select()"></p>
+      </div>
+    {% endif %}
+
+    <section class="panel team-panel">
+      <h2>成员</h2>
+      <div class="table">
+        <div class="table-head"><span>账号</span><span>角色</span><span>加入时间</span><span>操作</span></div>
+        {% for membership in memberships %}
+          <div class="row-wrap">
+            <span class="table-row">
+              <span class="cell">{{ membership.user.get_username }}</span>
+              <span class="cell">{{ membership.get_role_display }}</span>
+              <span class="cell">{{ membership.created_at|date:"Y-m-d" }}</span>
+              <span class="cell">
+                <form class="inline-form" method="post">
+                  {% csrf_token %}
+                  <input type="hidden" name="action" value="role">
+                  <input type="hidden" name="membership_id" value="{{ membership.pk }}">
+                  <select name="role" aria-label="修改角色">
+                    {% for value, label in role_choices %}
+                      <option value="{{ value }}"{% if membership.role == value %} selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                  </select>
+                  <button class="btn small" type="submit">保存</button>
+                </form>
+                <form class="inline-form" method="post" data-confirm="移除 {{ membership.user.get_username }}？">
+                  {% csrf_token %}
+                  <input type="hidden" name="action" value="remove">
+                  <input type="hidden" name="membership_id" value="{{ membership.pk }}">
+                  <button class="btn small" type="submit">移除</button>
+                </form>
+              </span>
+            </span>
+          </div>
+        {% endfor %}
+      </div>
+    </section>
+
+    <section class="panel team-panel">
+      <h2>邀请成员</h2>
+      <p class="hint">链接 {{ 72 }} 小时内有效，只能使用一次；可以随时撤销。</p>
+      <form method="post" class="inline-form">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="invite">
+        <select name="role" aria-label="邀请角色">
+          <option value="viewer">只读</option>
+          <option value="editor">编辑者</option>
+        </select>
+        <button class="btn primary" type="submit">生成邀请链接</button>
+      </form>
+      {% if invitations %}
+        <div class="table">
+          <div class="table-head"><span>角色</span><span>创建</span><span>到期</span><span>状态 / 操作</span></div>
+          {% for invitation in invitations %}
+            <div class="table-row">
+              <span class="cell">{{ invitation.get_role_display }}</span>
+              <span class="cell">{{ invitation.created_at|date:"Y-m-d H:i" }}</span>
+              <span class="cell">{{ invitation.expires_at|date:"Y-m-d H:i" }}</span>
+              <span class="cell">
+                {% if invitation.used_at %}已使用{% elif invitation.revoked_at %}已撤销{% elif invitation.is_live %}
+                  <form class="inline-form" method="post" data-confirm="撤销这条邀请？">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="revoke_invite">
+                    <input type="hidden" name="invite_id" value="{{ invitation.pk }}">
+                    <button class="btn small" type="submit">撤销</button>
+                  </form>
+                {% else %}已过期{% endif %}
+              </span>
+            </div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    </section>
+
+    <section class="panel team-panel">
+      <h2>外部工具令牌</h2>
+      <p><a class="btn" href="{% url 'projects:connections' project.pk %}">Claude Code / 自定义工具 / 多设备实例{% include 'projects/_icon.html' with name='arrow' %}</a></p>
+      <form method="post" class="inline-form">
+        {% csrf_token %}<input type="hidden" name="action" value="external">
+        <label>添加执行成员 <select name="tool"><option value="codex">Codex</option><option value="workbuddy">WorkBuddy</option><option value="cursor">Cursor</option><option value="harness">其他 Harness</option></select></label>
+        <button class="btn" type="submit">加入项目团队</button>
+      </form>
+      <p class="hint">令牌绑定项目和当前账号，只读或执行权限二选一；服务端每次调用都会重新核对项目成员身份。</p>
+      <form method="post" class="inline-form">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="token">
+        <input name="name" maxlength="80" placeholder="名称，例如 Codex 笔记本" required>
+        <select name="scope" aria-label="令牌权限">
+          <option value="read">只读</option>
+          <option value="execute">执行</option>
+        </select>
+        <select name="member" aria-label="绑定外部成员">
+          <option value="">不绑定外部成员</option>
+          {% for member in external_members %}<option value="{{ member.pk }}">{{ member.name }}</option>{% endfor %}
+        </select>
+        <input name="days" type="number" min="1" max="365" value="30" aria-label="有效天数">
+        <button class="btn primary" type="submit">生成令牌</button>
+      </form>
+      {% if tokens %}
+        <div class="table">
+          <div class="table-head"><span>名称</span><span>权限</span><span>最近调用</span><span>状态 / 操作</span></div>
+          {% for token in tokens %}
+            <div class="table-row">
+              <span class="cell">{{ token.name }}{% if token.member %} · {{ token.member.name }}{% endif %}</span>
+              <span class="cell">{{ token.get_scope_display }}</span>
+              <span class="cell">{% if token.last_seen_at %}{{ token.last_seen_at|date:"Y-m-d H:i" }}{% else %}从未{% endif %}</span>
+              <span class="cell">
+                {% if token.revoked_at %}已撤销{% elif token.is_live %}
+                  <form class="inline-form" method="post" data-confirm="撤销令牌 {{ token.name }}？">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="revoke_token">
+                    <input type="hidden" name="token_id" value="{{ token.pk }}">
+                    <button class="btn small" type="submit">撤销</button>
+                  </form>
+                {% else %}已过期{% endif %}
+              </span>
+            </div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    </section>
+{% endblock %}

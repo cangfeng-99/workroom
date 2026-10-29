@@ -1,0 +1,5 @@
+Django==5.2.18
+cryptography>=45.0.7,<51
+whitenoise>=6.12,<7
+waitress>=3.0.2,<4
+gunicorn>=23,<26; sys_platform != 'win32'

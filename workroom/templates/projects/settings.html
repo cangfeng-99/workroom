@@ -1,0 +1,8 @@
+{% extends 'projects/settings_shell.html' %}
+{% block title %}项目设置 · {{ project.name }}{% endblock %}
+{% block manage_content %}
+<header class="manage-heading"><h1>基础设置</h1><p>保持项目目标清晰，让团队和AI读取同一份项目信息。</p></header>
+<form method="post" class="settings-section manage-form">{% csrf_token %}{{ form.non_field_errors }}
+<div class="field-grid">{% for field in form %}{% include 'projects/_field.html' with field=field %}{% endfor %}</div>
+<div class="form-actions"><button class="btn primary" type="submit">保存基础信息</button><span class="field-help">修改目标后，执行者需要确认新版本。</span></div></form>
+{% endblock %}

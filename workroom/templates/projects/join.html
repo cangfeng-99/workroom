@@ -1,0 +1,28 @@
+{% extends 'base.html' %}
+{% block title %}加入项目 · WorkRoom{% endblock %}
+{% block body_class %}page-auth{% endblock %}
+{% block content %}
+<div class="auth-shell">
+  <div class="auth-card">
+    <h1>加入项目</h1>
+    {% if invalid %}
+      <p class="error">{{ invalid }}</p>
+      <p><a class="btn" href="{% url 'projects:index' %}">回到我的项目</a></p>
+    {% else %}
+      <p class="hint">{{ project.name }} · {{ project.goal_title }}</p>
+      <dl class="facts">
+        <div><dt>角色</dt><dd>{{ invitation.get_role_display }}</dd></div>
+        <div><dt>有效期至</dt><dd>{{ invitation.expires_at|date:"Y-m-d H:i" }}</dd></div>
+      </dl>
+      <p class="hint">{% if invitation.role == 'viewer' %}只读：能看项目内容，不能修改。{% else %}编辑者：可以协作任务、对话和资料，不能管理成员或验收。{% endif %}</p>
+      {% if needs_account %}
+      <p><a class="btn primary" href="{% url 'projects:register' %}?invite={{ invite_token|urlencode }}">注册账号并加入</a></p>
+      <p><a href="{% url 'projects:login' %}?next={% url 'projects:join_invite' invite_token %}">已有账号，登录后加入</a></p>
+      {% else %}<form method="post">
+        {% csrf_token %}
+        <button class="btn primary" type="submit">确认加入</button>
+      </form>{% endif %}
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

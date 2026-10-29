@@ -1,0 +1,55 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}接入 AI · {{ project.name }}{% endblock %}
+{% block body_class %}page-index{% endblock %}
+{% block content %}
+<div class="shell shell-index">
+
+  <header class="topbar">
+    <a class="brand" href="{% url 'projects:index' %}"><img src="{% static 'workroom/favicon.svg' %}" width="18" height="18" alt="">WorkRoom</a>
+    <a class="rail-back" href="{% url 'projects:space' project.pk %}?tab=chat">{% include 'projects/_icon.html' with name='back' %} 返回 {{ project.name }}</a>
+  </header>
+
+  <main class="index index-narrow">
+    <div class="index-head">
+      <h1>接入 AI</h1>
+      <p class="hint">这里只填名字、模型和 Key。加入后它会在群里先自我介绍，自己定角色与职责；不满意再改。</p>
+    </div>
+
+    <section class="settings-card">
+      <form method="post">
+        {% csrf_token %}
+        {% if form.non_field_errors %}<div class="alert">{{ form.non_field_errors }}</div>{% endif %}
+
+        <p class="form-section">它是谁</p>
+        <label for="{{ form.name.id_for_label }}">{{ form.name.label }}</label>
+        {{ form.name }}{{ form.name.errors }}
+
+        <p class="form-section">用什么模型</p>
+        <label for="{{ form.provider.id_for_label }}">{{ form.provider.label }}</label>
+        {{ form.provider }}{{ form.provider.errors }}
+
+        <label for="{{ form.model_name.id_for_label }}">{{ form.model_name.label }}</label>
+        {{ form.model_name }}{{ form.model_name.errors }}
+        <p class="hint">留空使用模型商默认模型。</p>
+
+        <label for="{{ form.base_url.id_for_label }}">{{ form.base_url.label }}</label>
+        {{ form.base_url }}{{ form.base_url.errors }}
+        <p class="hint">只有选「自定义」时需要填。</p>
+
+        <label for="{{ form.api_key.id_for_label }}">{{ form.api_key.label }}</label>
+        {{ form.api_key }}{{ form.api_key.errors }}
+        <p class="hint">Key 用 Windows DPAPI 加密后存本机，不会回显。</p>
+
+        <div class="settings-actions">
+          <button class="btn primary" type="submit">接入</button>
+          <a class="btn" href="{% url 'projects:space' project.pk %}?tab=chat">取消</a>
+        </div>
+      </form>
+    </section>
+
+    <p class="hint settings-note">接入后会发起一次模型调用，让它根据项目目标和其他成员给自己定位；失败也不影响使用，可以手动配置。</p>
+  </main>
+
+</div>
+{% endblock %}

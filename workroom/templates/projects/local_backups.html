@@ -1,0 +1,74 @@
+{% extends 'base.html' %}
+{% block title %}备份与恢复 · WorkRoom{% endblock %}
+{% block body_class %}page-backups{% endblock %}
+{% block content %}
+<main class="backup-shell">
+  <header class="backup-header">
+    <a class="backup-back" href="{% url 'projects:index' %}">返回项目</a>
+    <span class="backup-local">本机单人版</span>
+  </header>
+  <div class="backup-heading"><h1>备份与恢复</h1><p>把项目和记忆带走，需要时再找回来。全部操作都在这台电脑上完成。</p></div>
+
+  {% if error %}<div class="backup-notice backup-error" role="alert"><strong>这次操作未完成</strong><p>{{ error }}</p></div>{% endif %}
+  {% if restore_state.error %}<p class="backup-notice backup-error" role="alert">{{ restore_state.error }}</p>{% endif %}
+  {% if restore_state.result %}
+  <section class="backup-notice {% if restore_state.result.status != 'success' %}backup-error{% endif %}" role="status">
+    <strong>{% if restore_state.result.status == 'success' %}上次恢复已完成{% else %}上次恢复未完成{% endif %}</strong>
+    <p>{{ restore_state.result.message }}</p>
+    {% if restore_state.result.safety_backup %}<p class="small">恢复前的备份保留在：<code>{{ restore_state.result.safety_backup }}</code></p>{% endif %}
+  </section>
+  {% endif %}
+  {% if restore_state.has_pending %}
+  <section class="backup-notice backup-pending" aria-labelledby="pending-title">
+    {% if restore_state.pending %}
+    <strong id="pending-title">已安排下次启动恢复</strong>
+    <p>请先关闭 WorkRoom 启动窗口，再重新打开应用。仅刷新或关闭网页不会执行恢复；启动时会再次检查是否还有任务在执行。</p>
+    <p>恢复前会自动保存当前完整备份。若检查失败，应用会保留原数据并显示原因，不会反复尝试。</p>
+    {% else %}<strong id="pending-title">恢复计划需要处理</strong><p>请取消损坏的恢复计划，再重新选择备份检查。</p>{% endif %}
+    <form method="post">{% csrf_token %}<button class="btn" name="action" value="cancel">取消这次恢复</button></form>
+  </section>
+  {% endif %}
+
+  <div class="backup-grid">
+    <section class="backup-card" aria-labelledby="export-title">
+      <h2 id="export-title">导出当前进度</h2>
+      <p>一个 ZIP，保存项目、任务、对话、资料、交付记录和已授权工作区中的 <code>.workroom</code> 记忆。</p>
+      <dl class="backup-stats"><div><dt>项目</dt><dd>{{ counts.projects }}</dd></div><div><dt>任务</dt><dd>{{ counts.tasks }}</dd></div><div><dt>交付</dt><dd>{{ counts.deliveries }}</dd></div></dl>
+      <form method="post">{% csrf_token %}<button class="btn primary" name="action" value="export">导出备份 ZIP</button></form>
+      <p class="backup-footnote">浏览器会下载一份，本机也保留一份。备份包含私人内容，请保存在自己的位置。</p>
+    </section>
+
+    <section class="backup-card" aria-labelledby="import-title">
+      <h2 id="import-title">先检查，再恢复</h2>
+      <p>选择 WorkRoom 导出的 ZIP，先查看内容。选择文件和检查都不会改动当前项目。</p>
+      <form method="post" enctype="multipart/form-data" class="backup-upload">
+        {% csrf_token %}<label for="backup-file">备份 ZIP <span class="muted">· 最大 64 MB</span></label>
+        <input id="backup-file" type="file" name="archive" accept=".zip,application/zip" required aria-describedby="backup-file-hint">
+        <p id="backup-file-hint" class="backup-footnote">只接收与当前数据库结构一致的备份；旧版本备份请用对应版本程序恢复。</p>
+        <button class="btn" name="action" value="inspect">检查备份内容</button>
+      </form>
+    </section>
+  </div>
+
+  {% if inspected %}
+  <section class="backup-card backup-preview" aria-labelledby="preview-title">
+    <h2 id="preview-title">备份检查通过</h2>
+    <p>备份时间：<time datetime="{{ inspected.created_at }}">{{ inspected.created_at_display }}</time> · ZIP 大小：{{ inspected.size|filesizeformat }}</p>
+    <dl class="backup-stats"><div><dt>项目</dt><dd>{{ inspected.counts.projects }}</dd></div><div><dt>任务</dt><dd>{{ inspected.counts.tasks }}</dd></div><div><dt>交付</dt><dd>{{ inspected.counts.deliveries }}</dd></div><div><dt>对话</dt><dd>{{ inspected.counts.messages }}</dd></div><div><dt>资料</dt><dd>{{ inspected.counts.library }}</dd></div><div><dt>记忆文件</dt><dd>{{ inspected.memory_files }}</dd></div></dl>
+    {% for warning in inspected.warnings %}<p class="backup-footnote">{{ warning }}</p>{% endfor %}
+    <div class="backup-restore-notes"><p><strong>恢复会替换本机所有项目记录，不会合并。</strong>执行前会自动保留当前备份。</p><p>记忆会放入应用专用目录，原代码文件夹不会被覆盖。恢复后请重新关联代码工作区、重新连接外部工具；旧任务不会自动开始运行。</p></div>
+    <form method="post" class="backup-confirm">
+      {% csrf_token %}<input type="hidden" name="token" value="{{ inspected.token }}">
+      <label><input type="checkbox" name="confirm_replace" value="yes" required>我已核对备份内容，同意下次启动时替换本机全部项目记录。</label>
+      <button class="btn primary" name="action" value="schedule">安排下次启动恢复</button>
+    </form>
+  </section>
+  {% endif %}
+
+  <details class="backup-details"><summary>备份范围与存放位置</summary><div>
+    <p>包含数据库中的个人配置与加密凭据，不包含代码文件夹、外部 AI 软件登录状态、服务器环境配置。换电脑或 Windows 账号后，模型密钥可能需要重新填写。</p>
+    <p>恢复前和应用升级前的备份也保存在：<code>{{ backup_directory }}</code>。本版不自动删除历史备份，可在确认已有副本后自行整理。</p>
+    <p>校验用于发现损坏，不证明文件来源。请只恢复你自己导出的备份。</p>
+  </div></details>
+</main>
+{% endblock %}

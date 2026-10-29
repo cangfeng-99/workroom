@@ -1,0 +1,30 @@
+{% extends 'projects/settings_shell.html' %}{% load static %}
+{% block title %}工具连接 · {{ project.name }}{% endblock %}
+{% block manage_content %}
+<header class="manage-heading"><h1>工具连接</h1><p>把你常用的AI工具带进项目，领取任务、同步进度并提交成果。</p></header>
+<div class="connection-feedback" data-connect-feedback role="status"{% if not notice %} hidden{% endif %}>{{ notice }}</div>
+<section class="settings-section" data-connection-list data-status-url="{% url 'projects:connection_status' project.pk %}">
+  <div class="section-heading"><div><h2>选择你的工具</h2><p class="field-help">{% if auto_local %}自动配置这台电脑上的工具，原有连接会保留。{% else %}在使用AI工具的电脑上完成连接，仅授权当前项目。{% endif %}</p></div>
+  {% if can_edit %}<label class="connection-scope">项目权限<select data-connection-scope aria-label="连接项目权限"><option value="execute">领取与交付</option><option value="read">只读</option></select></label>{% endif %}</div>
+  <div class="provider-list">
+  {% for tool in tools %}<article class="provider-row" data-provider="{{ tool.key }}"{% if tool.member %} data-member="{{ tool.member.pk }}"{% endif %}>
+    <span class="provider-icon" aria-hidden="true"><svg viewBox="0 0 24 24">{% if tool.key == 'codex' %}<path d="m9 7-5 5 5 5m6-10 5 5-5 5"/>{% elif tool.key == 'workbuddy' %}<rect x="4" y="7" width="16" height="13" rx="4"/><path d="M12 3v4m-4 6h.01M16 13h.01M9 17h6"/>{% elif tool.key == 'cursor' %}<path d="m5 3 14 9-7 1-3 7-4-17Z"/>{% elif tool.key == 'claude-code' %}<path d="m5 7 5 5-5 5m8 0h6"/>{% else %}<path d="M5 6h14M5 12h14M5 18h8"/>{% endif %}</svg></span>
+    <div class="provider-copy"><h3>{{ tool.label }}</h3><p>{% if tool.key == 'harness' %}通过官方MCP插件接入{% elif tool.mode == 'local' %}已检测到本机配置，可自动接入{% elif tool.mode == 'cursor' %}打开Cursor并确认安装{% else %}下载助手，在你的电脑上运行{% endif %}</p></div>
+    <span class="connection-state{% if tool.connected %} is-connected{% endif %}" data-connection-state>{% if tool.connected %}凭据已验证{% elif tool.configured %}待工具加载{% else %}未连接{% endif %}</span>
+    {% if can_edit %}{% if tool.mode == 'manual' %}<a class="btn" href="#advanced-connection" data-open-advanced>高级接入</a>{% else %}
+    <form method="post" action="{% url 'projects:quick_connect' project.pk tool.key %}" data-quick-connect>{% csrf_token %}<input type="hidden" name="mode" value="{{ tool.mode }}"><input type="hidden" name="platform" value="{{ device_platform }}"><input type="hidden" name="scope" value="execute"><button class="btn{% if tool.mode == 'local' %} primary{% endif %}" type="submit" data-idle-label="{{ tool.action }}">{% if tool.configured and tool.mode == 'local' %}更新本机配置{% else %}{{ tool.action }}{% endif %}</button></form>{% endif %}{% endif %}
+  </article>{% endfor %}
+  </div>
+  <p class="connection-footnote">此页负责保存配置；请在AI应用的MCP设置中重新加载连接。有效凭据会复用，撤销授权后须重新配置。“凭据已验证”表示该凭据曾成功调用项目，客户端当前状态请在AI应用内确认。{% if not auto_local %}连接助手需要Python 3.11及以上；Mac下载后可用sh运行.command。{% endif %}</p>
+</section>
+{% if configuration %}<section class="settings-section" role="status"><div class="section-heading"><h2>{{ configured_member.name }} · 手动连接配置</h2><span class="status-tag">仅本次显示</span></div>
+<p class="field-help">凭据有效30天，保存在自己的客户端私有配置中。</p>
+{% if configured_member.tool == 'harness' %}<p class="field-help">将以下dsh-mcp-client条目合并到Cordis插件列表，保留已有配置。</p>{% endif %}
+{% if command %}<pre id="connection-command">{{ command }}</pre><button class="btn" type="button" data-copy-target="connection-command">复制连接命令</button>{% endif %}
+<details class="manage-details"><summary>查看配置代码</summary><pre id="connection-config">{{ configuration }}</pre><button class="btn" type="button" data-copy-target="connection-config">复制配置</button></details></section>{% endif %}
+{% if instances %}<section class="settings-section"><div class="section-heading"><h2>项目中的连接</h2></div><div class="instance-list">
+{% for member in instances %}<article class="instance-row" id="connection-{{ member.pk }}"><div><h3>{{ member.name }}</h3><p class="field-help">{{ member.tool }} · {{ member.device_name|default:'未指定设备' }} · {{ member.connection_user.username|default:'旧实例' }}</p><p class="field-help">{% if member.last_connected_at %}最近成功调用：{{ member.last_connected_at|date:'m-d H:i' }}{% else %}尚未验证连接{% endif %}</p></div>
+{% if can_edit and member.connection_user_id == request.user.pk %}<details class="instance-actions"><summary>管理连接</summary><form method="post" class="manage-action-menu">{% csrf_token %}<input type="hidden" name="member" value="{{ member.pk }}"><select name="scope" aria-label="实例权限"><option value="read">只读</option><option value="execute">领取与交付</option></select><button class="btn" name="action" value="configure">生成我的连接配置</button><button class="btn danger" name="action" value="revoke">撤销连接</button></form></details>{% endif %}</article>{% endfor %}</div></section>{% endif %}
+{% if can_edit %}<details class="settings-section manage-details" id="advanced-connection"{% if form.errors %} open{% endif %}><summary><span>高级接入</span><span class="field-help">自定义工具、其他设备与手动配置</span></summary><form method="post" class="manage-form">{% csrf_token %}<input type="hidden" name="action" value="add">{{ form.non_field_errors }}<div class="field-grid">{% for field in form %}{% include 'projects/_field.html' with field=field %}{% endfor %}</div><div class="form-actions"><button class="btn primary" type="submit">添加实例</button></div></form></details>{% endif %}
+{% endblock %}
+{% block extra_scripts %}<script src="{% static 'workroom/connections.js' %}?v=T067" defer></script>{% endblock %}

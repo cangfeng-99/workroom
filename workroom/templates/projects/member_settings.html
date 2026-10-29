@@ -1,0 +1,87 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}配置 {{ member.name }} · WorkRoom{% endblock %}
+{% block body_class %}page-index{% endblock %}
+{% block content %}
+<div class="shell shell-index">
+
+  <header class="topbar">
+    <a class="brand" href="{% url 'projects:index' %}"><img src="{% static 'workroom/favicon.svg' %}" width="18" height="18" alt="">WorkRoom</a>
+    <a class="rail-back" href="{% url 'projects:space' project.pk %}?tab=chat">{% include 'projects/_icon.html' with name='back' %} 返回 {{ project.name }}</a>
+  </header>
+
+  <main class="index index-narrow">
+    <div class="index-head">
+      <h1>配置 {{ member.name }}</h1>
+      <p class="hint">先给这个 AI 定身份：叫什么、担任什么角色、负责什么、不做什么。再选它用哪家模型和 Key；Key 用 Windows DPAPI 加密后存本机数据库，页面上不会回显。</p>
+    </div>
+
+    <section class="settings-card">
+      <p class="status-line">
+        {% if member.has_key %}
+          <span class="chip">已配置 Key · {{ member.model_name|default:"未填模型" }}</span>
+        {% else %}
+          <span class="badge-soft">未配置 Key · 当前走演示拆分</span>
+        {% endif %}
+      </p>
+
+      <form method="post">
+        {% csrf_token %}
+        {% if form.non_field_errors %}<div class="alert">{{ form.non_field_errors }}</div>{% endif %}
+
+        <p class="form-section">身份</p>
+
+        <label for="{{ form.name.id_for_label }}">{{ form.name.label }}</label>
+        {{ form.name }}{{ form.name.errors }}
+
+        <label for="{{ form.role.id_for_label }}">{{ form.role.label }}</label>
+        {{ form.role }}{{ form.role.errors }}
+
+        <label for="{{ form.duty.id_for_label }}">{{ form.duty.label }}</label>
+        {{ form.duty }}{{ form.duty.errors }}
+        <p class="hint">提议出方案，评审挑问题，决策拍板，执行落地。群聊「讨论」按这个顺序发言。</p>
+
+        <label for="{{ form.persona.id_for_label }}">{{ form.persona.label }}</label>
+        {{ form.persona }}{{ form.persona.errors }}
+        <p class="hint">这段会写进提示词：它负责什么、先看什么、不许做什么。角色决定分工，身份设定决定它怎么想。</p>
+
+        <p class="form-section">模型连接</p>
+
+        <label for="{{ form.provider.id_for_label }}">{{ form.provider.label }}</label>
+        {{ form.provider }}{{ form.provider.errors }}
+
+        <label for="{{ form.model_name.id_for_label }}">{{ form.model_name.label }}</label>
+        {{ form.model_name }}{{ form.model_name.errors }}
+        <p class="hint">留空就用默认模型；厂商改名时改这里。</p>
+
+        <label for="{{ form.base_url.id_for_label }}">{{ form.base_url.label }}</label>
+        {{ form.base_url }}{{ form.base_url.errors }}
+        <p class="hint">只有选「自定义」时需要填；其他模型商自动用官方地址。</p>
+
+        <label for="{{ form.api_key.id_for_label }}">{{ form.api_key.label }}</label>
+        {{ form.api_key }}{{ form.api_key.errors }}
+        <p class="hint">留空不改动已保存的 Key；填了会覆盖。</p>
+
+        <label class="check">{{ form.clear_key }} {{ form.clear_key.label }}</label>
+
+        <div class="settings-actions">
+          <button class="btn primary" type="submit">保存</button>
+          <a class="btn" href="{% url 'projects:space' project.pk %}?tab=chat">取消</a>
+        </div>
+      </form>
+
+      <form method="post" class="settings-actions" style="margin-top:10px">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="optimize">
+        <button class="btn small" type="submit">让 AI 重新定义身份</button>
+        <span class="hint">按现有成员重新选互补角色，并重写规则与职责。</span>
+      </form>
+
+
+    </section>
+
+    <p class="hint settings-note">Key 绑定当前 Windows 账号与本机：换账号或换机器后需要重新填写。调用走 HTTPS 443，拒绝重定向和内网地址，超时 60 秒。</p>
+  </main>
+
+</div>
+{% endblock %}

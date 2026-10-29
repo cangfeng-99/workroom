@@ -1,0 +1,67 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}编辑资料 · WorkRoom{% endblock %}
+{% block body_class %}page-index{% endblock %}
+{% block content %}
+<div class="shell shell-index">
+
+  <header class="topbar">
+    <a class="brand" href="{% url 'projects:index' %}"><img src="{% static 'workroom/favicon.svg' %}" width="18" height="18" alt="">WorkRoom</a>
+    <a class="rail-back" href="{% url 'projects:space' project.pk %}?tab=library&amp;entry={{ entry.pk }}">{% include 'projects/_icon.html' with name='back' %}返回资料库</a>
+  </header>
+
+  <main class="index index-narrow">
+    <div class="index-head">
+      <h1>编辑资料</h1>
+      <p class="hint">来源：{{ entry.get_source_display }}{% if entry.source_ref %} · {{ entry.source_ref }}{% endif %}。规则和决策会进入 AI 的项目上下文。</p>
+    </div>
+
+    <section class="settings-card">
+      <form method="post">
+        {% csrf_token %}
+        <label for="lib-kind">类型</label>
+        <select id="lib-kind" name="kind">
+          {% for value, label in kind_choices %}
+            <option value="{{ value }}"{% if entry.kind == value %} selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+
+        <label for="lib-title">标题</label>
+        <input id="lib-title" name="title" maxlength="160" value="{{ entry.title }}" required>
+
+        <label for="lib-summary">一句话结论</label>
+        <input id="lib-summary" name="summary" maxlength="200" value="{{ entry.summary }}" placeholder="例如：先做 P0，其他进二期">
+
+        <label for="lib-body">内容</label>
+        <textarea id="lib-body" name="body" rows="6">{{ entry.body }}</textarea>
+
+        <label for="lib-context">背景 / 约束来源</label>
+        <textarea id="lib-context" name="context" rows="3" placeholder="为什么会有这条？来自哪次讨论或哪个限制">{{ entry.context }}</textarea>
+
+        <label for="lib-options">备选方案</label>
+        <textarea id="lib-options" name="options" rows="3" placeholder="考虑过但没选的方案，以及为什么">{{ entry.options }}</textarea>
+
+        <label for="lib-conclusion">结论 / 落地方式</label>
+        <textarea id="lib-conclusion" name="conclusion" rows="3" placeholder="最终怎么定、怎么落地">{{ entry.conclusion }}</textarea>
+
+        <label for="lib-tags">标签</label>
+        <input id="lib-tags" name="tags" maxlength="120" value="{{ entry.tags }}" placeholder="逗号分隔，例如：范围, 登录">
+
+        <label for="lib-task">关联任务</label>
+        <select id="lib-task" name="task">
+          <option value="">不关联</option>
+          {% for task in tasks %}
+            <option value="{{ task.pk }}"{% if entry.task_id == task.pk %} selected{% endif %}>{{ task.title }}</option>
+          {% endfor %}
+        </select>
+
+        <div class="settings-actions">
+          <button class="btn primary" type="submit">保存</button>
+          <a class="btn" href="{% url 'projects:space' project.pk %}?tab=library&amp;entry={{ entry.pk }}">取消</a>
+        </div>
+      </form>
+    </section>
+  </main>
+
+</div>
+{% endblock %}

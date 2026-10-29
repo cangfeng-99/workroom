@@ -1,0 +1,24 @@
+{% extends 'base.html' %}
+{% block title %}登录 · WorkRoom{% endblock %}
+{% block body_class %}page-auth{% endblock %}
+{% block content %}
+<div class="auth-shell">
+  <div class="auth-card">
+    <h1>登录 WorkRoom</h1>
+    <p class="hint">项目、任务、对话和交付都只对项目成员可见。</p>
+    {% if error %}<p class="error">{{ error }}</p>{% endif %}
+    <form method="post">
+      {% csrf_token %}
+      <input type="hidden" name="next" value="{{ next }}">
+      <label for="username">用户名</label>
+      <input id="username" name="username" autocomplete="username" required autofocus>
+      <label for="password">密码</label>
+      <input id="password" name="password" type="password" autocomplete="current-password" required>
+      <button class="btn primary" type="submit">登录</button>
+    </form>
+    {% if allow_registration %}
+      <p class="hint">还没有账号？<a href="{% url 'projects:register' %}{% if next %}?next={{ next|urlencode }}{% endif %}">注册</a></p>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,73 @@
+{% extends 'base.html' %}
+{% block title %}交付与确认 · {{ task.title }}{% endblock %}
+{% block body_class %}page-personal-delivery{% endblock %}
+{% block content %}
+<main class="personal-delivery">
+  <header class="personal-delivery-heading">
+    <a class="btn small" href="{% url 'projects:space' project.pk %}?tab=tasks&amp;task={{ task.pk }}">← 返回 {{ project.name }}</a>
+    <p class="muted">交付结果，由你确认</p>
+    <h1>{{ task.title }}</h1>
+    <p>提交结果和证据后，由你核对并确认完成，或写明原因退回修改。此流程不调用 AI 审核。</p>
+    {% if task.acceptance %}<details><summary>查看完成标准</summary><p>{{ task.acceptance|linebreaksbr }}</p></details>{% endif %}
+  </header>
+  {% if error %}<p class="error personal-delivery-error" role="alert">{{ error }}</p>{% endif %}
+  {% if pending %}<p class="personal-delivery-notice" role="status">已有交付待你确认。先查看下面的结果，再确认完成或退回；不用重复提交。</p>{% endif %}
+  <div class="personal-delivery-layout">
+    {% if can_submit %}
+    <section class="personal-submit" aria-labelledby="submit-heading">
+      <h2 id="submit-heading">提交这次结果</h2>
+      <form method="post" class="workflow-form" data-personal-submit>
+        {% csrf_token %}<input type="hidden" name="action" value="submit">
+        <input type="hidden" name="idempotency_key" value="{{ form_values.idempotency_key }}">
+        <label for="delivery-summary">做出了什么</label>
+        <input id="delivery-summary" name="summary" maxlength="500" value="{{ form_values.summary }}" placeholder="例如：登录成功后能回到原项目" required>
+        <label for="delivery-body">改动与说明 <span class="muted">（选填）</span></label>
+        <textarea id="delivery-body" name="body" rows="3" maxlength="20000">{{ form_values.body }}</textarea>
+        <label for="delivery-evidence">证据位置</label>
+        <input id="delivery-evidence" name="evidence_ref" maxlength="300" value="{{ form_values.evidence_ref }}" placeholder="例如：报告路径、截图名称或检查记录链接">
+        <p class="hint">填写能找到结果的位置，或在下面提供通过的检查记录。这里不会上传文件或执行命令。</p>
+        <details class="delivery-technical"{% if form_values.test_exit_code %} open{% endif %}>
+          <summary>代码改动与检查记录</summary>
+          <label>代码基准<input name="baseline" maxlength="200" value="{{ form_values.baseline }}"></label>
+          <label>提交版本 <span class="muted">（选填）</span><input name="commit_ref" maxlength="120" value="{{ form_values.commit_ref }}"></label>
+          <label>修改了哪些文件<textarea name="changed_files" rows="3">{{ form_values.changed_files }}</textarea></label>
+          <label>实际运行的检查命令<textarea name="test_commands" rows="2">{{ form_values.test_commands }}</textarea></label>
+          <label>检查退出码<input name="test_exit_code" type="number" min="-255" max="255" value="{{ form_values.test_exit_code }}" placeholder="0 表示通过"></label>
+          <label>检查输出<textarea name="test_output" rows="4">{{ form_values.test_output }}</textarea></label>
+          <p class="hint">任务约定了检查命令时，确认前必须提供对应的通过结果。</p>
+        </details>
+        <button class="btn primary" type="submit">提交，等待我确认</button>
+      </form>
+    </section>
+    {% endif %}
+    <section class="personal-records" aria-labelledby="records-heading">
+      <h2 id="records-heading">交付记录</h2>
+      {% for record in records %}
+      <article class="personal-record" data-delivery="{{ record.pk }}">
+        <header><span class="delivery-state is-{{ record.status }}">{% if record.status == 'pending' %}待你确认{% elif record.status == 'accepted' %}已确认完成{% else %}已退回修改{% endif %}</span><span class="muted">#{{ record.pk }} · {{ record.created_at|date:'Y-m-d H:i' }}</span></header>
+        <h3>{{ record.summary }}</h3>
+        {% if record.body %}<div class="delivery-body">{{ record.body|linebreaksbr }}</div>{% endif %}
+        <p><strong>证据位置：</strong>{{ record.evidence_ref|default:'尚未提供；确认前请补充证据。' }}</p>
+        {% if record.test_exit_code != None %}<p><strong>检查结果：</strong>{% if record.test_exit_code == 0 %}通过{% else %}未通过{% endif %}（退出码 {{ record.test_exit_code }}）</p>{% endif %}
+        <details class="delivery-technical">
+          <summary>查看完整改动与检查证据</summary>
+          <dl><dt>基准 / 提交版本</dt><dd>{{ record.baseline|default:'未提供' }} / {{ record.commit_ref|default:'未提供' }}</dd>
+            <dt>修改文件</dt><dd><pre>{{ record.changed_files|default:'未提供' }}</pre></dd>
+            <dt>检查命令</dt><dd><pre>{{ record.test_commands|default:'未提供' }}</pre></dd>
+            <dt>检查输出</dt><dd><pre>{{ record.test_output|default:'未提供' }}</pre></dd></dl>
+        </details>
+        {% if record.status == 'pending' %}
+        <form method="post" class="workflow-form delivery-confirm" data-personal-confirm>
+          {% csrf_token %}<input type="hidden" name="delivery" value="{{ record.pk }}">
+          <label>补充证据位置 <span class="muted">（选填）</span><input name="evidence_ref" maxlength="300" value="{{ form_values.evidence_ref }}"></label>
+          <label>确认意见或退回原因<textarea name="note" rows="3" maxlength="4000" placeholder="退回时请写清要修改什么。">{{ form_values.note }}</textarea></label>
+          <label class="delivery-check"><input type="checkbox" name="evidence_checked">我已核对结果、完成标准和检查证据</label>
+          <div class="delivery-actions"><button class="btn primary" type="submit" name="action" value="accept">确认完成</button><button class="btn" type="submit" name="action" value="return">退回修改</button></div>
+        </form>
+        {% else %}<p class="delivery-review-note"><strong>{% if record.status == 'returned' %}要修改什么{% else %}确认意见{% endif %}：</strong>{{ record.review_note|default:'已核对交付结果。'|linebreaksbr }}</p>{% endif %}
+      </article>
+      {% empty %}<p class="hint">还没有交付。先保存这次结果，再核对证据并确认。</p>{% endfor %}
+    </section>
+  </div>
+</main>
+{% endblock %}

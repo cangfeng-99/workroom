@@ -1,0 +1,81 @@
+{% extends 'projects/settings_shell.html' %}
+{% block title %}交付验收 · {{ task.title }}{% endblock %}
+{% block manage_content %}
+<header class="manage-heading">
+  <a href="{% url 'projects:space' project.pk %}?tab=tasks&task={{ task.pk }}">{% include 'projects/_icon.html' with name='back' %} {{ project.name }} · 任务树</a>
+  <h1>{{ task.title }}</h1>
+  <p>{{ task.detail }}</p>
+</header>
+  <p><strong>验收条件：</strong>{{ task.acceptance|default:'请先在任务详情中填写验收条件。' }}</p>
+  {% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
+  <section class="panel workflow-panel">
+    <h2>任务包</h2>
+    <p>类型：{% if package_spec.work_kind == 'code' %}软件开发{% else %}普通任务{% endif %} · 工作区：{{ package_spec.workspace_key }} · 风险：{% if package_spec.risk == 'high' %}高{% elif package_spec.risk == 'low' %}低{% else %}普通{% endif %}</p>
+    <p>基准：{{ package_spec.baseline|default:'未设置' }}</p>
+    <p>允许范围：{{ package_spec.allowed_paths|join:'、'|default:'未设置' }}</p>
+    <p>检查命令：{{ package_spec.check_commands|join:'；'|default:'未设置' }}</p>
+    {% if package_error %}<p class="error">{{ package_error }}</p>{% endif %}
+    {% if can_review %}<a class="btn" href="{% url 'projects:package' project.pk task.pk %}">编辑任务包</a>{% endif %}
+    <p class="hint">文件范围约束检查交付清单；本机实际读写仍需要执行工具的授权和权限控制。</p>
+  </section>
+  {% if can_edit and task.status != 'done' %}
+  <section class="panel workflow-panel">
+    {% if not claim %}
+    <form method="post">{% csrf_token %}<input type="hidden" name="action" value="claim"><button class="btn primary">认领任务</button></form>
+    {% else %}
+    <p>执行记录 {{ claim.run_id }} · 上下文 r{{ claim.context_revision }}</p>
+    {% if claim.context_revision != project.context_revision %}
+    <p class="error">项目规则已更新。请先查看项目资料库，再确认当前版本。</p>
+    <form method="post">{% csrf_token %}<input type="hidden" name="action" value="confirm_context"><input type="hidden" name="revision" value="{{ project.context_revision }}"><button class="btn">我已查看并确认 r{{ project.context_revision }}</button></form>
+    {% endif %}
+    <form method="post" class="workflow-form">
+      {% csrf_token %}<input type="hidden" name="action" value="submit">
+      <input type="hidden" name="idempotency_key" value="web-{{ claim.run_id }}">
+      <label>交付摘要<input name="summary" maxlength="500" required></label>
+      <label>说明<textarea name="body" rows="3"></textarea></label>
+      <label>基准版本<input name="baseline"></label>
+      <label>Commit<input name="commit_ref"></label>
+      <label>变更文件<textarea name="changed_files" rows="3"></textarea></label>
+      <label>测试命令<textarea name="test_commands" rows="2"></textarea></label>
+      <label>测试退出码<input name="test_exit_code" type="number" min="-255" max="255"></label>
+      <label>测试输出<textarea name="test_output" rows="4"></textarea></label>
+      <label>证据引用<input name="evidence_ref" placeholder="例如 CI 运行编号、报告路径或截图记录"></label>
+      <details><summary>费用记录（可选）</summary><label>实际费用<input name="cost_amount" type="number" min="0" step="0.000001"></label><label>币种<input name="currency" maxlength="3" placeholder="CNY / USD"></label><p class="hint">费用为自报；不填写时显示未知。</p></details>
+      <button class="btn primary">提交待验收</button>
+    </form>
+    {% endif %}
+  </section>
+  {% endif %}
+  <h2>交付记录</h2>
+  <p class="hint">证据由执行者上报；系统不会运行其中的命令。AI 意见供参考，完成状态由负责人验收确定。</p>
+  {% for record in records %}
+  <article class="panel workflow-panel">
+    <h3>#{{ record.pk }} {{ record.summary }} · {{ record.get_status_display }}</h3>
+    <p>{{ record.body|linebreaksbr }}</p>
+    <dl><dt>基准 / Commit</dt><dd>{{ record.baseline }} / {{ record.commit_ref }}</dd>
+      <dt>变更文件</dt><dd><pre>{{ record.changed_files }}</pre></dd>
+      <dt>测试命令 / 退出码</dt><dd><pre>{{ record.test_commands }}</pre>{{ record.test_exit_code|default_if_none:'未提供' }}</dd>
+      <dt>测试输出</dt><dd><pre>{{ record.test_output }}</pre></dd>
+      <dt>证据引用</dt><dd>{{ record.evidence_ref|default:'未提供' }}</dd></dl>
+    <p class="hint">执行耗时 {{ record.duration_seconds|floatformat:1|default:'未知' }} 秒 · {% if record.accounting.cost_amount %}{{ record.accounting.currency }} {{ record.accounting.cost_amount }}（自报）{% else %}费用未知{% endif %}</p>
+    {% for review in record.independent_reviews.all %}<p><strong>独立复核：</strong>{{ review.reviewer_member.name|default:review.reviewer_user.username }} · {{ review.get_verdict_display }} · {{ review.note }}</p>{% endfor %}
+    {% if record.status == 'pending' and can_edit %}
+    <details><summary class="btn small">提交独立复核意见</summary><form method="post" class="workflow-form">{% csrf_token %}
+      <input type="hidden" name="action" value="independent_review"><input type="hidden" name="delivery" value="{{ record.pk }}">
+      <label>结论<select name="verdict"><option value="approved">建议通过</option><option value="changes">需要修改</option></select></label>
+      <label>证据与理由<textarea name="note" rows="3" required></textarea></label><button class="btn">保存复核</button>
+    </form></details>
+    {% endif %}
+    {% if record.status == 'pending' and can_review %}
+    <form method="post" class="workflow-form">
+      {% csrf_token %}<input type="hidden" name="delivery" value="{{ record.pk }}">
+      <label>核对意见<textarea name="note" rows="2"></textarea></label>
+      <label>补充证据引用<input name="evidence_ref"></label>
+      <label><input type="checkbox" name="evidence_checked">我已核对检查命令、输出和对应代码版本</label>
+      <div><button class="btn primary" name="action" value="accept">通过验收</button>
+      <button class="btn" name="action" value="return">退回修改</button></div>
+    </form>
+    {% elif record.reviewed_by %}<p>{{ record.reviewed_by }} · {{ record.reviewed_at }} · {{ record.review_note }}</p>{% endif %}
+  </article>
+  {% empty %}<p>尚无交付。认领后提交变更和验证证据。</p>{% endfor %}
+{% endblock %}

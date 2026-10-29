@@ -1,0 +1,14 @@
+[Unit]
+Description=WorkRoom durable worker
+After=network.target workroom-web.service
+[Service]
+User=workroom
+WorkingDirectory=/opt/workroom
+EnvironmentFile=/etc/workroom.env
+ExecStart=/opt/workroom/.venv/bin/python manage.py workroom_worker --worker-id server-worker
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+PrivateTmp=true
+[Install]
+WantedBy=multi-user.target

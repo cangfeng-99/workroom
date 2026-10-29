@@ -1,0 +1,15 @@
+<details class="task-branch{% if not branch.children %} task-leaf{% endif %}" data-task-branch="{{ branch.task.pk }}"{% if branch.opened %} open{% endif %}>
+  <summary data-task-open data-task-id="{{ branch.task.pk }}">
+    <span class="task-branch-heading"><span class="task-id">#{{ branch.task.pk }}</span><span class="task-branch-title">{{ branch.task.title }}</span></span>
+    <span class="task-branch-state">{{ branch.task.readable.label }} · 负责人：{{ branch.task.readable.owner_short|default:branch.task.readable.owner }} · {% if branch.task.start_date %}{{ branch.task.start_date|date:"Y-m-d" }}{% else %}开始时间未定{% endif %} 至 {% if branch.task.end_date %}{{ branch.task.end_date|date:"Y-m-d" }}{% else %}完成时间未定{% endif %} · {{ branch.task.get_priority_display }}优先级</span>
+    <span class="task-branch-purpose">{{ branch.task.readable.summary }}</span>
+    {% if branch.task.readable.primary and not branch.task.readable.blockers %}<span class="task-branch-reason">{{ branch.task.readable.primary.text }}</span>{% endif %}
+    <span class="task-branch-prompt">{% if branch.children %}展开下面的 {{ branch.children|length }} 项任务{% else %}查看怎么做{% endif %}</span>
+  </summary>
+  <div class="task-branch-body">
+    {% include 'projects/_task_reasons.html' with task=branch.task %}
+    {% if branch.children and not branch.task.readable.blockers %}<p class="task-next-action">下一步：{{ branch.task.readable.next_action }}</p>{% elif not branch.children %}{% include 'projects/_task_plain.html' with task=branch.task %}{% endif %}
+    <a class="btn small task-open-link" href="?tab=tasks&amp;task={{ branch.task.pk }}" data-task-open data-task-id="{{ branch.task.pk }}">完整任务与技术要求</a>
+    {% for child in branch.children %}{% include 'projects/_task_branch.html' with branch=child %}{% endfor %}
+  </div>
+</details>

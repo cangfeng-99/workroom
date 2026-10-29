@@ -1,0 +1,19 @@
+<section class="task-plain" aria-label="任务说明">
+  <h3>具体要做什么</h3>
+  <p>{{ task.readable.summary }}</p>
+  {% if task.guide.why %}<p class="task-why"><strong>为什么做：</strong>{{ task.guide.why }}</p>{% endif %}
+  {% if task.guide.estimate %}<p class="hint">预计：{{ task.guide.estimate }}</p>{% endif %}
+  {% if task.readable.guide.planning %}<p class="task-empty-explanation">这是复验和补齐清单：先看现有内容，已满足的记录证据，缺少的再改，不是要求把已有功能重写一遍。</p>{% endif %}
+  {% if task.readable.guide.steps %}
+    <h3>按什么顺序做</h3>
+    <ol>{% for step in task.readable.guide.steps %}<li>{{ step }}</li>{% endfor %}</ol>
+  {% else %}
+    <p class="task-empty-explanation">还没有逐步说明，请负责人补充操作步骤。下面保留原始工作内容。</p>
+    <div class="task-original-content">{{ task.detail|default:"还没有填写工作内容。"|linebreaksbr }}</div>
+  {% endif %}
+  {% if task.readable.guide.frontend %}<h3>页面要做成什么样</h3><ul>{% for line in task.readable.guide.frontend %}<li>{{ line }}</li>{% endfor %}</ul>{% endif %}
+  {% if task.readable.guide.backend %}<h3>后端要做什么</h3><ul>{% for line in task.readable.guide.backend %}<li>{{ line }}</li>{% endfor %}</ul>{% endif %}
+  <h3>看到什么结果才算完成</h3>
+  {% if task.readable.guide.outcomes %}<ul>{% for line in task.readable.guide.outcomes %}<li>{{ line }}</li>{% endfor %}</ul>{% else %}<p>{{ task.acceptance|default:"还没有填写具体的通过标准，请负责人补充。"|linebreaksbr }}</p>{% endif %}
+  {% if not task.readable.blockers %}<p class="task-next-action"><strong>下一步：</strong>{{ task.readable.next_action }}</p>{% endif %}
+</section>

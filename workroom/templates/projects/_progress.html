@@ -1,0 +1,38 @@
+<section class="project-progress" aria-labelledby="progress-title">
+  <header class="progress-heading"><div><h1 id="progress-title">阶段进度</h1><p>按现有任务层级汇总。只统计具体任务，阶段节点不重复计数。</p></div><a class="btn small" href="?tab=tasks">打开任务树</a></header>
+  {% if progress.total %}
+    <div class="progress-overview">
+      <p class="progress-completion"><strong>{{ progress.counts.done }} / {{ progress.total }} 项具体任务已完成</strong><span>{{ progress.percent }}%</span></p>
+      <progress max="{{ progress.total }}" value="{{ progress.counts.done }}" aria-label="具体任务完成进度">{{ progress.percent }}%</progress>
+      <ul class="progress-counts" aria-label="具体任务状态"><li>待本人确认 {{ progress.counts.pending }}</li><li>待修改 {{ progress.counts.returned }}</li><li>需处理阻碍 {{ progress.counts.blocked }}</li><li>进行中 {{ progress.counts.doing }}</li><li>待开始 {{ progress.counts.todo }}</li></ul>
+      <p class="progress-note">待本人确认的交付不计完成。这里按任务数量统计，不代表工时；阶段是否结束，仍需核对阶段记录。</p>
+    </div>
+    {% if progress.next %}
+      {% with action=progress.next %}<section class="progress-next" aria-label="建议下一步"><h2>{{ action.label }}</h2><p class="progress-next-title">{{ action.row.task.title }}</p><p>{{ action.description }}</p><a class="btn primary" href="{% if action.kind == 'review' %}{% url 'projects:task_delivery' project.pk action.row.task.pk %}{% else %}?tab=tasks&amp;task={{ action.row.task.pk }}{% endif %}">{% if action.kind == 'review' %}打开交付记录{% else %}查看这一步{% endif %}</a></section>{% endwith %}
+    {% else %}<p class="progress-finished" role="status">当前具体任务和阶段均已记录完成。可以到任务树核对结果，或安排下一次迭代。</p>{% endif %}
+    <div class="milestone-list">
+      {% for stage in progress.stages %}
+        <details class="milestone" data-milestone="{% if stage.task %}{{ stage.task.pk }}{% else %}unassigned{% endif %}"{% if stage.expanded %} open{% endif %}>
+          <summary><span class="milestone-title">{{ stage.title }}</span><span class="milestone-state">{{ stage.label }}</span><span class="milestone-ratio">{{ stage.counts.done }} / {{ stage.total }} 项 · {{ stage.percent }}%</span></summary>
+          <div class="milestone-body">
+            {% if stage.task %}
+              <div class="milestone-description"><p>{{ stage.readable.summary }}</p><p class="progress-note">阶段记录：{{ stage.own.label }} · 负责人：{{ stage.readable.owner }} · {% if stage.task.start_date %}{{ stage.task.start_date|date:"Y-m-d" }} 开始{% else %}开始未安排{% endif %} · {% if stage.task.end_date %}{{ stage.task.end_date|date:"Y-m-d" }} 截止{% else %}截止未安排{% endif %}{% if stage.overdue %} · 已过目标日期{% endif %}</p>
+                {% for blocker in stage.readable.blockers %}<div class="milestone-reason"><p>{{ blocker.text }}</p><p>怎样继续：{{ blocker.action }}</p></div>{% endfor %}
+                <details class="milestone-criteria"><summary>阶段目标与验收要求</summary><p>{{ stage.task.detail|default:"还没有填写阶段说明。"|linebreaksbr }}</p><p><strong>怎样算完成：</strong>{{ stage.task.acceptance|default:"还没有填写，请先核对阶段交付标准。"|linebreaksbr }}</p><a href="?tab=tasks&amp;task={{ stage.task.pk }}">打开阶段完整说明</a></details>
+              </div>
+            {% else %}<p class="progress-note">这些具体任务还没有归入阶段。仍计入项目进度，可在任务树安排层级。</p>{% endif %}
+            <progress max="{{ stage.total }}" value="{{ stage.counts.done }}" aria-label="{{ stage.title }}具体任务进度">{{ stage.percent }}%</progress>
+            <ul class="progress-task-list">
+              {% for row in stage.rows %}<li><details class="progress-task" data-progress-task="{{ row.task.pk }}"><summary><span class="progress-task-title">{{ row.task.title }}</span><span class="progress-state state-{{ row.category }}">{{ row.label }}</span></summary><div class="progress-task-body"><p>{{ row.readable.summary }}</p><p class="progress-note">负责人：{{ row.readable.owner }} · {% if row.task.start_date %}{{ row.task.start_date|date:"Y-m-d" }} 开始{% else %}开始未安排{% endif %} · {% if row.task.end_date %}{{ row.task.end_date|date:"Y-m-d" }} 截止{% else %}截止未安排{% endif %}{% if row.overdue %} · 已过目标日期{% endif %}</p>
+                {% for blocker in row.readable.blockers %}<div class="milestone-reason"><p>{{ blocker.text }}</p><p>怎样继续：{{ blocker.action }}</p></div>{% endfor %}
+                {% if row.category == 'pending' %}<p>最新交付尚待本人核对，不需要重复执行这项任务。</p>{% endif %}
+                <div class="progress-task-links"><a href="?tab=tasks&amp;task={{ row.task.pk }}">查看完整任务</a>{% if row.delivery %}<a href="{% url 'projects:task_delivery' project.pk row.task.pk %}">查看交付记录</a>{% endif %}</div>
+              </div></details></li>{% endfor %}
+            </ul>
+          </div>
+        </details>
+      {% endfor %}
+    </div>
+  {% else %}<div class="progress-empty"><h2>先安排一项能验收的工作</h2><p>这里还没有未归档的具体任务。添加任务并按阶段拆分后，进度会根据实际状态显示。</p><a class="btn primary" href="?tab=tasks">到任务树安排第一步</a></div>{% endif %}
+  {% if progress.archived_count %}<p class="progress-note progress-archive-note">已排除 {{ progress.archived_count }} 个归档节点及其历史路线，查看归档不会改变这里的统计。</p>{% endif %}
+</section>

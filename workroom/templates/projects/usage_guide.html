@@ -1,0 +1,27 @@
+{% extends 'base.html' %}
+{% block title %}使用指南 · WorkRoom{% endblock %}
+{% block body_class %}page-guide{% endblock %}
+{% block content %}
+<main class="guide-shell">
+  <header class="guide-header"><a href="{% url 'projects:index' %}">返回项目</a><span>本机单人版</span></header>
+  <div class="guide-intro"><h1>使用指南</h1><p>{{ guide_intro }}</p></div>
+  {% if error %}<div class="guide-error" role="alert"><strong>这次还没有打开练习项目</strong><p>{{ error }}</p></div>{% endif %}
+  <section class="guide-practice" aria-labelledby="practice-title">
+    <div><h2 id="practice-title">从一份练习任务树开始</h2><p>个人待办工具：{{ example_phase_count }} 个阶段，{{ example_leaf_count }} 项具体任务。全部待做，日期由你安排；这是固定模板，不会调用 AI 或创建代码文件。</p><p class="guide-caption">第一次会创建一个普通练习项目，之后打开原项目，不重置你的修改。可在项目首页删除。</p></div>
+    <div class="guide-actions"><form method="post" action="{% url 'projects:example_starter' %}">{% csrf_token %}<button class="btn primary" type="submit">打开练习项目</button></form><a class="btn" href="{% url 'projects:guide_download' %}">下载使用说明</a></div>
+  </section>
+  <div class="guide-layout">
+    <nav class="guide-nav" aria-label="指南章节"><ol>{% for section in guide_sections %}<li><a href="#{{ section.id }}">{{ section.title }}</a></li>{% endfor %}</ol></nav>
+    <div class="guide-content">
+      {% for section in guide_sections %}
+      <section class="guide-section" id="{{ section.id }}" aria-labelledby="heading-{{ section.id }}">
+        <h2 id="heading-{{ section.id }}">{{ section.title }}</h2><p class="guide-summary">{{ section.summary }}</p>
+        <ol>{% for step in section.steps %}<li>{{ step }}</li>{% endfor %}</ol>
+        {% if section.example %}<div class="guide-example"><strong>可以这样开始</strong><p>{{ section.example }}</p></div>{% endif %}
+      </section>
+      {% endfor %}
+      <footer class="guide-footer"><p>先完成一项能核对的小任务，再继续下一项。任务里的状态和证据，以真实发生的工作为准。</p><a href="{% url 'projects:index' %}">回到我的项目</a></footer>
+    </div>
+  </div>
+</main>
+{% endblock %}

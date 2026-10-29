@@ -1,0 +1,24 @@
+{% extends 'base.html' %}{% load static %}
+{% block body_class %}page-server page-settings{% endblock %}
+{% block extra_head %}<link rel="stylesheet" href="{% static 'workroom/settings.css' %}?v=T062">{% endblock %}
+{% block content %}
+<div class="manage-shell">
+  <header class="manage-topbar">
+    <a class="manage-brand" href="{% url 'projects:index' %}"><img src="{% static 'workroom/favicon.svg' %}" width="24" height="24" alt="">WorkRoom</a>
+    <span class="manage-breadcrumb"><span aria-hidden="true">/</span><a href="{% url 'projects:space' project.pk %}">{{ project.name }}</a></span>
+    <span class="manage-account">{{ request.user.username }}</span>
+  </header>
+  <div class="manage-layout">
+    <nav class="manage-nav" aria-label="项目管理">
+      <a class="manage-back" href="{% url 'projects:space' project.pk %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m14 7-5 5 5 5"/></svg>返回项目</a>
+      <a href="{% url 'projects:connections' project.pk %}"{% if request.resolver_match.url_name == 'connections' %} class="is-active" aria-current="page"{% endif %}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3v5m8-5v5M6 8h12v4a6 6 0 0 1-12 0V8Zm6 10v3"/></svg>工具连接</a>
+      {% if owner_controls or can_review %}
+      <a href="{% url 'projects:settings' project.pk %}"{% if request.resolver_match.url_name == 'settings' %} class="is-active" aria-current="page"{% endif %}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 17h16M8 4v6m8 4v6"/></svg>基础设置</a>
+      <a href="{% url 'projects:policy' project.pk %}"{% if request.resolver_match.url_name == 'policy' %} class="is-active" aria-current="page"{% endif %}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3 8 3v6c0 4-4 7-8 9-4-2-8-5-8-9V6l8-3Zm-4 9 3 3 5-6"/></svg>协作策略</a>
+      <a href="{% url 'projects:team' project.pk %}"{% if request.resolver_match.url_name == 'team' %} class="is-active" aria-current="page"{% endif %}><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3"/><path d="M3 20v-2a6 6 0 0 1 12 0v2m1-15a3 3 0 0 1 0 6m5 9v-2a6 6 0 0 0-3-5"/></svg>团队成员</a>
+      {% endif %}
+    </nav>
+    <main class="manage-main">{% block manage_content %}{% endblock %}</main>
+  </div>
+</div>
+{% endblock %}

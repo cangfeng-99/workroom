@@ -1,0 +1,17 @@
+.env
+.env.*
+!.env.example
+.secret_key
+data
+backups
+staticfiles
+**/*.sqlite3*
+**/.preview-secrets.json
+*.sqlite3*
+__pycache__
+.pytest_cache
+.ruff_cache
+tests
+dist
+build
+*.log

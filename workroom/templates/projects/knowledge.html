@@ -1,0 +1,71 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}知识库问答 · {{ project.name }}{% endblock %}
+{% block body_class %}page-index{% endblock %}
+{% block content %}
+<div class="shell shell-index">
+
+  <header class="topbar">
+    <a class="brand" href="{% url 'projects:index' %}"><img src="{% static 'workroom/favicon.svg' %}" width="18" height="18" alt="">WorkRoom</a>
+    <a class="rail-back" href="{% url 'projects:space' project.pk %}?tab=library">{% include 'projects/_icon.html' with name='back' %}返回项目</a>
+  </header>
+
+  <main class="index index-narrow">
+    <div class="index-head">
+      <h1>知识库问答</h1>
+      <p class="hint">
+        回答只依据项目资料库，并标注引用。当前索引：
+        {% if status.chunks %}{{ status.chunks }} 块{% else %}尚未建立{% endif %}
+        {% if status.stale %}，其中 {{ status.stale }} 块需重算{% endif %}
+        · 向量方式：{% if status.mode == 'remote' %}远程接口（{{ status.model }}）{% else %}本地哈希（未配置向量接口）{% endif %}
+      </p>
+    </div>
+
+    {% if notice %}<p class="hint">{{ notice }}</p>{% endif %}
+    {% if error %}<p class="hint">{{ error }}</p>{% endif %}
+
+    <section class="settings-card">
+      <form method="post" action="">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="ask">
+        <label for="kb-q">问资料库</label>
+        <textarea id="kb-q" name="q" rows="3" placeholder="例如：这个项目的验收流程是什么？">{{ question }}</textarea>
+        <div class="settings-actions">
+          <button class="btn primary" type="submit">提问</button>
+        </div>
+      </form>
+
+      <form method="post" action="" style="margin-top:12px">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="reindex">
+        <div class="settings-actions">
+          <button class="btn" type="submit">重建索引</button>
+          <button class="btn" type="submit" name="force" value="1">强制重算</button>
+        </div>
+      </form>
+    </section>
+
+    {% if result %}
+    <section class="settings-card" style="margin-top:16px">
+      <h2>回答</h2>
+      <p style="white-space:pre-wrap">{{ result.answer }}</p>
+      {% if result.mode == 'extractive' %}
+      <p class="hint">当前没有配置对话接口，以上是原文摘录。配置 WORKROOM_RAG_CHAT_* 后会改成模型生成。</p>
+      {% endif %}
+      {% if result.citations %}
+      <h3>引用</h3>
+      <ol>
+        {% for item in result.citations %}
+        <li>
+          <a href="{% url 'projects:space' project.pk %}?tab=library&amp;entry={{ item.entry_id }}">{{ item.title }}</a>
+          <span class="hint">（相似度 {{ item.score }}）</span>
+          <p class="hint">{{ item.snippet }}…</p>
+        </li>
+        {% endfor %}
+      </ol>
+      {% endif %}
+    </section>
+    {% endif %}
+  </main>
+</div>
+{% endblock %}

@@ -1,0 +1,6 @@
+<div class="manage-field{% if field.errors %} has-error{% endif %}">
+  <label for="{{ field.id_for_label }}">{{ field.label }}{% if field.name == 'baseline' or field.name == 'allowed_paths' or field.name == 'check_commands' %}<span class="field-optional">代码任务必填</span>{% elif not field.field.required %}<span class="field-optional">可选</span>{% endif %}</label>
+  {{ field }}
+  {% if field.help_text %}<p class="field-help" id="{{ field.auto_id }}_helptext">{{ field.help_text }}</p>{% endif %}
+  {% if field.errors %}<div class="field-error" id="{{ field.auto_id }}_error" role="alert">{{ field.errors }}</div>{% endif %}
+</div>

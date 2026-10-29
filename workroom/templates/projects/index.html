@@ -1,0 +1,89 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}项目 · WorkRoom{% endblock %}
+{% block body_class %}page-index{% endblock %}
+{% block content %}
+<div class="shell shell-index">
+
+  <header class="topbar">
+    <a class="brand" href="{% url 'projects:index' %}"><img src="{% static 'workroom/favicon.svg' %}" width="18" height="18" alt="">WorkRoom</a>
+    <span class="muted small">{{ projects|length }} 个项目</span>
+    <a class="btn small" href="{% url 'projects:profile' %}">我的身份</a>
+    {% if not workroom_is_server %}<a class="btn small" href="{% url 'projects:local_backups' %}">备份与恢复</a>{% endif %}
+    {% if not workroom_is_server %}<a class="btn small" href="{% url 'projects:guide' %}">使用指南</a>{% endif %}
+    {% if workroom_user %}
+      <span class="topbar-right">
+        <span class="muted small">{{ workroom_user.get_username }}</span>
+        <form method="post" action="{% url 'projects:logout' %}">{% csrf_token %}<button class="btn small" type="submit">退出</button></form>
+      </span>
+    {% endif %}
+  </header>
+
+  <main class="index">
+    {% if first_project %}
+      {% include 'projects/_onboarding.html' %}
+    {% else %}
+    <div class="index-head">
+      <h1>项目</h1>
+      <p class="hint">一个项目 = 一个目标、一个 AI 搭档、一棵任务树。数据只存在这台电脑上。</p>
+    </div>
+
+    {% if projects %}
+      <ul class="cards">
+        {% for item in projects %}
+          {% if workroom_is_server %}{% widthratio item.active_done item.active_total 100 as pct %}{% endif %}
+          <li class="card-wrap">
+            <a class="card" href="{% url 'projects:space' item.pk %}" style="--i: {{ forloop.counter0 }}">
+              <span class="card-top">
+                <span class="card-name">{{ item.name }}</span>
+                <span class="card-count">{% if workroom_is_server %}{{ item.active_total }} 个任务{% else %}{{ item.personal_progress.total }} 项具体任务{% endif %}</span>
+              </span>
+              <span class="card-goal">目标 · {{ item.goal_title }}</span>
+              <span class="bar" aria-hidden="true"><span style="width: {% if workroom_is_server %}{{ pct }}{% else %}{{ item.personal_progress.percent }}{% endif %}%"></span></span>
+              <span class="card-foot">
+                <span class="avatars">
+                  {% for member in item.members.all|slice:":3" %}
+                    <span class="avatar avatar-{{ member.kind }}{% if member.logo_file %} has-logo{% endif %}" title="{{ member.name }}">{% if member.logo_file %}<img src="{% static member.logo_file %}" alt="">{% else %}{{ member.initial }}{% endif %}</span>
+                  {% endfor %}
+                  {% if item.members.all|length > 3 %}
+                    <span class="avatar avatar-more">+{{ item.members.all|length|add:"-3" }}</span>
+                  {% endif %}
+                </span>
+                <span class="card-count">{% if workroom_is_server %}{{ item.active_percent }}% · {{ item.active_done }}/{{ item.active_total }}{% else %}{{ item.personal_progress.percent }}% · {{ item.personal_progress.counts.done }}/{{ item.personal_progress.total }}{% endif %}</span>
+              </span>
+            </a>
+            {% if not workroom_is_server or item.owner_id == workroom_user.id %}
+            <form class="card-del" method="post" action="{% url 'projects:delete' item.pk %}" data-confirm="删除项目「{{ item.name }}」？任务、对话、资料都会一起删除，无法恢复。">
+              {% csrf_token %}
+              <button class="card-del-btn" type="submit" aria-label="删除项目" title="删除项目">{% include 'projects/_icon.html' with name='close' %}</button>
+            </form>
+            {% endif %}
+          </li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <div class="empty">
+        <p>还没有项目</p>
+        <p class="hint">在下面建一个，目标就是任务树的右端终点。</p>
+      </div>
+    {% endif %}
+
+    <details class="new-project" id="new"{% if error %} open{% endif %}>
+      <summary>{% include 'projects/_icon.html' with name='plus' %} 新建项目</summary>
+      <form method="post">
+        {% csrf_token %}
+        {% if error %}<p class="error">{{ error }}</p>{% endif %}
+        <label for="name">项目名称</label>
+        <input id="name" name="name" maxlength="120" placeholder="例如：开发项目 v1" value="{{ entered_name }}" required>
+        <label for="goal">目标（任务树右端）</label>
+        <input id="goal" name="goal" maxlength="200" placeholder="例如：v1 上线" value="{{ entered_goal }}" required>
+        <button class="btn primary" type="submit">创建项目</button>
+      </form>
+      <p class="hint">创建后自动带一个真人成员「我」和一个 AI 成员「DeepSeek」，可以再改。</p>
+    </details>
+    {% endif %}
+    {% if not workroom_is_server %}{% include 'projects/_example_entry.html' %}{% endif %}
+  </main>
+
+</div>
+{% endblock %}

@@ -1,0 +1,10 @@
+{% extends 'base.html' %}
+{% block title %}草稿暂未保存 · WorkRoom{% endblock %}
+{% block content %}
+<main class="settings-page draft-error-page"><section class="panel workflow-panel">
+  <h1>草稿暂未保存为任务</h1>
+  <p class="error" role="alert">{{ error }}</p>
+  <p>返回对话，核对前置任务和先后顺序，再重新生成草稿。本次没有创建任务，已有任务保持原样。</p>
+  <a class="btn primary" href="{% url 'projects:space' project.pk %}?tab=chat">返回对话</a>
+</section></main>
+{% endblock %}

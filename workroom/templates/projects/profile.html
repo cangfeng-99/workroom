@@ -1,0 +1,47 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}我的身份 · WorkRoom{% endblock %}
+{% block body_class %}page-index{% endblock %}
+{% block content %}
+<div class="shell shell-index">
+
+  <header class="topbar">
+    <a class="brand" href="{% url 'projects:index' %}"><img src="{% static 'workroom/favicon.svg' %}" width="18" height="18" alt="">WorkRoom</a>
+  </header>
+
+  <main class="index index-narrow">
+    <div class="index-head">
+      <h1>我的身份</h1>
+      <p class="hint">AI 会按你的身份选择拆分视角。信息只存在本项目里，不会传给外部工具。</p>
+    </div>
+
+    <form method="post" class="settings-card workflow-form">
+      {% csrf_token %}
+      <label>主身份
+        <select name="role">
+          {% for value, label in roles %}
+            <option value="{{ value }}"{% if profile.role == value %} selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </label>
+
+      <fieldset class="role-checks">
+        <legend>次身份（可多选）</legend>
+        {% for value, label in roles %}{% if value != profile.role %}
+          <label class="role-check">
+            <input type="checkbox" name="secondary" value="{{ value }}"{% if value in profile.secondary_roles %} checked{% endif %}>
+            {{ label }}
+          </label>{% endif %}
+        {% endfor %}
+      </fieldset>
+
+      <label>领域<input name="domain" maxlength="80" value="{{ profile.domain }}" placeholder="例如：鸿蒙应用 / 电商后台"></label>
+      <label>经验<input name="experience" maxlength="40" value="{{ profile.experience }}" placeholder="例如：3 年 / 刚入门"></label>
+      <label>常用技术或工具<input name="stack" maxlength="200" value="{{ profile.stack }}" placeholder="例如：ArkTS、Django、Figma"></label>
+      <label>当前目标<textarea name="goal" rows="3" placeholder="例如：三个月内做一个能上架的作品">{{ profile.goal }}</textarea></label>
+
+      <button class="btn primary" type="submit">保存并进入</button>
+    </form>
+  </main>
+</div>
+{% endblock %}
