@@ -1,9 +1,0 @@
-<fieldset class="member-row">
-  <legend class="sr-only">初始成员</legend>
-  <div class="member-field"><label for="{{ member_form.kind.id_for_label }}">类型</label>{{ member_form.kind }}{{ member_form.kind.errors }}</div>
-  <div class="member-field"><label for="{{ member_form.username.id_for_label }}">账号（真人）</label>{{ member_form.username }}{{ member_form.username.errors }}</div>
-  <div class="member-field"><label for="{{ member_form.name.id_for_label }}">名称（AI）</label>{{ member_form.name }}{{ member_form.name.errors }}</div>
-  <div class="member-field"><label for="{{ member_form.role.id_for_label }}">分工角色</label>{{ member_form.role }}{{ member_form.role.errors }}</div>
-  {{ member_form.non_field_errors }}
-  <button type="button" class="button ghost member-remove" data-remove-member hidden>移除成员</button>
-</fieldset>

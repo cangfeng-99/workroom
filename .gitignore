@@ -18,6 +18,11 @@ tasks/logs/
 *.log
 *.sqlite3
 *.sqlite3-journal
+*.sqlite3-wal
+*.sqlite3-shm
+workroom/.secret_key
+workroom/data/
+workroom/staticfiles/
 
 # Python caches / build
 __pycache__/
@@ -48,3 +53,15 @@ Desktop.ini
 # Machine-local verification output and app configuration backups
 tasks/reports/
 tasks/backups/
+
+# 重构前的旧结构，不再跟踪
+backend/
+tasks/
+experts/
+docs/
+AGENTS.md
+CODEBUDDY.md
+CONSTRAINTS.md
+PROJECT.md
+START_HERE.md
+*.cmd

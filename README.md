@@ -1,61 +1,78 @@
-# AgentWorkspace AI 协作工作台
+# WorkRoom
 
-本机 Django 开发版本：注册登录、项目空间、真人/AI角色团队、邀请、计划任务树，以及显式授权的本机文件工作区。
+一个人用的本地项目工作台：立项 → 拆任务 → 执行 → 验收 → 沉淀记忆。
 
-当前实现与验收以 `tasks/current.md` 最新快照为准；规格、边界和证据分别在 `tasks/specs/`、`CONSTRAINTS.md` 和 `tasks/acceptance/`。AI角色目前用于分工，尚未连接模型或外部工具。
+不开服务器、不注册账号、数据全在这台电脑上。
 
-## 投递简历后继续
+---
 
-1. 双击 `Run-Backend.cmd`，打开首页确认服务正常。
-2. 在Codex选择本目录，新聊天使用 `START_HERE.md` 的入口；现有聊天可说“继续 AgentWorkspace，从当前任务开始”。
-3. 打开 `/projects/` 体验项目空间与新建配置；下一项范围看 `tasks/current.md`，不重建项目或重复安装依赖。
+## 下载即用（Windows x64）
 
+到 [Releases](../../releases) 下载最新的 `WorkRoom-*-windows-x64.zip`：
 
-## 启动
+1. 解压到任意一个普通文件夹（`WorkRoom.exe` 和 `_internal` 必须在一起）
+2. 双击 `WorkRoom.exe`
+3. 控制窗口出现，浏览器自动打开工作台
 
-双击根目录的 `Run-Backend.cmd`。它会：
+不需要预装 Python、不需要装数据库、不需要管理员权限。
 
-1. 使用 `.venv\Scripts\python.exe`（`PYTHONUTF8=1`）；
-2. 对本地开发库执行 `manage.py migrate --noinput`；
-3. 启动 `runserver 127.0.0.1:8000`。
+首次运行会在 `%LOCALAPPDATA%\WorkRoom` 建好数据目录，之后换新版本直接解压覆盖程序文件夹即可，个人数据不受影响。
 
-缺少虚拟环境或 Django 时会明确报错并保留窗口。按 `Ctrl+C` 停止，不注册常驻服务。脚本不联网、不安装依赖、不读取 MySQL 凭据。
+> 这个包没有代码签名，Windows 可能提示「已保护你的电脑」。点「更多信息 → 仍要运行」。校验包是否完整，可以对照 Release 里的 SHA256。
 
-启动后：
+## 数据存在哪
 
-- 首页：http://127.0.0.1:8000/
-- 项目：http://127.0.0.1:8000/projects/
-- 健康检查：http://127.0.0.1:8000/api/health/ （仅表示进程存活，不表示数据库或 AI 可用）
+| 内容 | 位置 |
+|---|---|
+| 项目、任务、交付、聊天记录 | `%LOCALAPPDATA%\WorkRoom\db.sqlite3` |
+| 工作区授权与长期记忆 | `%LOCALAPPDATA%\WorkRoom\.workroom` |
+| 日志 | `%LOCALAPPDATA%\WorkRoom\logs\desktop.log` |
 
-## 常用命令
+**关于数据库**：用的是 SQLite，它是嵌入式的，整个数据库就是一个文件，随程序一起走。不用单独安装 MySQL/Postgres，也不用起服务。第一次启动时程序自己建表。
 
-在项目根目录执行：
+要备份就复制整个 `%LOCALAPPDATA%\WorkRoom` 目录；要在另一台电脑接着用，把目录拷过去即可。应用内的「备份与恢复」页面也能导出和导入 ZIP。
 
-```text
-.venv\Scripts\python.exe backend\manage.py check
-.venv\Scripts\python.exe backend\manage.py migrate --noinput
-.venv\Scripts\python.exe -m pytest -q
-.venv\Scripts\python.exe -m ruff check backend
+## 从源码运行
+
+需要 Python 3.12+。
+
+```bash
+python -m venv .venv
+.venv/Scripts/pip install -r workroom/requirements-server.in   # macOS/Linux 用 .venv/bin/pip
+python tools/run_workroom.py --port 8021
 ```
 
-## 当前开发库
+打开 http://127.0.0.1:8021/ 。开发模式使用 `workroom/data` 作为数据目录，和 exe 的 `%LOCALAPPDATA%\WorkRoom` 是分开的两套。
 
-本机开发与测试使用 SQLite：`.tools/dev.sqlite3`，已由本次迁移创建。`.tools/` 已被 Git 忽略，其中还存放首次运行生成的 `django-secret-key`；两者都不提交。
+## 构建安装包
 
-## 使用项目与本机文件
+```bash
+# Windows：产出 dist/WorkRoom-<版本>-windows-x64.zip
+python tools/build_windows.py
 
-注册登录后打开 http://127.0.0.1:8000/projects/ ：
+# macOS：产出 dist/WorkRoom-<版本>-macos.dmg
+python tools/build_macos.py
+```
 
-1. 新建项目：名称、说明、项目指令、可选工作空间和初始成员。选择目录只填路径，勾选授权并提交后才绑定当前项目；owner自动加入。
-2. 动态发布成员留言；计划切换表格/看板或打开任务树；任务可拆分、指定负责人/日期/状态，真人成员可更新自己被分配任务的状态。
-3. 资产页只展示owner已授权本机目录的元数据，不上传。进入原文件工作区可编辑常见UTF-8代码/文本（64KiB以内）并保存回原处或新建；冲突和重名不覆盖。
-4. 所有者可添加真人/AI角色、调整分工或生成一次性邀请。真人必须是已有活跃账号或通过邀请注册；邀请不分享本机文件权限。
-5. 授权绑定当前账号/项目/浏览器会话。撤销或退出后需重新授权；其它成员不能读取owner的目录，资产也不会变成共享云文件。
+PyInstaller 不能交叉编译，Windows 包只能在 Windows 上打，macOS 包只能在 macOS 上打。没有 Mac 时用 `.github/workflows/build-macos.yml`，在 GitHub Actions 的 macOS runner 上构建。
 
-工作区使用用户选定的既有实际文件夹，每目录最多显示100项；路径越界、隐藏、链接/reparse及多硬链文件受保护。未授予命令执行能力，也不是OS级沙箱。真实文件symlink测试受Windows权限限制而跳过，其余安全验证以最新验收记录为准。
+## 它是怎么工作的
 
-## 未实现 / 待接
+- **任务树**：X 轴是项目阶段（立项 → 设计 → 开发 → 测试 → 发布 → 复盘），Y 轴是阶段下的具体任务
+- **状态向上聚合**：子任务变了，阶段状态立刻重算，不用手动改
+- **交付验收**：执行者提交结果和证据，由你自己核对确认；工具说「做完了」不等于完成
+- **外部工具接入**：Codex、Cursor、WorkBuddy 通过 MCP 读取任务、认领、回报和交付，共 24 个工具
+- **长期记忆**：项目内的规则、决策和结论会作为上下文带进每次对话
 
-- MySQL：尚未接入，保留为后续明确选型；当前不自动探测或猜测凭据。
-- AI API设置与连接测试、外部AI编程工具连接、自动拆分/执行、技能与定时执行仍待后续规格；用户届时自行填写key。
-- 当前仅127.0.0.1开发服务，邀请链接尚不能直接提供跨电脑远程协作。最终部署、桌面安装包与执行隔离方案未锁定。
+## 目录结构
+
+```
+workroom/      Django 工程（应用、模板、静态资源、测试）
+tools/         启动器与打包脚本
+packaging/     PyInstaller 配置、图标、许可
+.github/       跨平台构建流水线
+```
+
+## 许可
+
+第三方组件许可见 `packaging/licenses/` 与打包产物内的 `THIRD_PARTY_NOTICES.txt`。
