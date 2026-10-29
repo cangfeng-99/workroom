@@ -237,7 +237,6 @@ select {
   background-image: none;
 }
 
-/* 去绿色：主色全部回到中性灰，只保留状态色 */
 :root {
   --green: #6d6d6d;
   --green-2: #8a8a8a;
@@ -472,7 +471,7 @@ h1, h2, h3, .index-head h1, .progress-heading h1 { font-weight: 700; }
   text-overflow: ellipsis;
 }
 
-/* ===== 亮色修订：近白底 + 深色文字，去掉卡片的绿色跟手光斑 ===== */
+/* ===== 亮色主题 ===== */
 :root {
   --bg: #f7f8f9;
   --panel: #ffffff;
@@ -546,7 +545,7 @@ main {
   background-color: #414851;
 }
 
-/* ===== 去绿收口：按钮、任务卡、连线节点、提示面板统一白/灰 ===== */
+/* ===== 中性灰收口 ===== */
 .rail-new,
 .rail-new:hover,
 .rail-new:active {
@@ -571,7 +570,6 @@ main {
 .node::after { display: none !important; }
 .node:hover { border-color: var(--line-strong); }
 
-/* 绿色提示面板统一改中性 */
 .progress-next,
 .project-welcome,
 .guide-example,
@@ -663,7 +661,7 @@ main {
 .st-meta { color: #4a525b; }
 .st-status { color: #3a424b; }
 
-/* ===== 悬停终版：纯白底 + 整圈亮边加粗，去掉一切灰感 ===== */
+/* ===== 悬停 ===== */
 .stage-task:hover,
 .stage-task.is-todo:hover,
 .stage-task.is-doing:hover,

@@ -1,0 +1,36 @@
+name: build-macos
+
+# macOS 包只能在 macOS 上构建（PyInstaller 不支持交叉编译），
+# 本地没有 Mac 时用这个 workflow 出 .app / .dmg。
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r workroom/requirements-server.in pyinstaller
+
+      - name: Build app and dmg
+        run: python tools/build_macos.py
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: WorkRoom-macos
+          path: |
+            dist/*.dmg
+            dist/*.dmg.sha256
+            dist/*-macos.zip
+          if-no-files-found: error
