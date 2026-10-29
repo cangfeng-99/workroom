@@ -1149,6 +1149,13 @@ def _connect_context(results=None):
 
 
 @require_GET
+def _from_pk(request) -> str:
+    """Project id passed by the rail so child pages can return to the workspace."""
+    value = str(request.GET.get('from', '')).strip()
+    # 只有数字能当 pk 用，否则 {% url %} 会抛 NoReverseMatch
+    return value if value.isdigit() else ''
+
+
 def connect(request):
     if is_server():
         from django.conf import settings as django_settings
@@ -1166,10 +1173,12 @@ def connect(request):
                 'server_path': '',
                 'results': [],
                 'clients': [],
+                'from_pk': _from_pk(request),
             },
         )
     context = _connect_context()
     context['clients'] = mcp_clients.status()
+    context['from_pk'] = _from_pk(request)
     return render(request, 'projects/connect.html', context)
 
 

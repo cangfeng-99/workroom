@@ -164,8 +164,9 @@ def test_busy_data_gate_has_clear_error_and_no_partial_example(local_example, cl
 
 
 def test_home_and_workspace_link_to_guide(local_example, client):
-    assert 'href="/guide/"' in client.get("/").content.decode()
+    assert 'href="/guide/' in client.get("/").content.decode()
     reply = client.post("/examples/starter/")
     assert reply.status_code == 302
     project = Project.objects.get()
-    assert 'href="/guide/"' in client.get(f"/p/{project.pk}/").content.decode()
+    # rail 会带 ?from=<pk>，让指南页能返回工作区
+    assert 'href="/guide/' in client.get(f"/p/{project.pk}/").content.decode()

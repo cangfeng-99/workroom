@@ -1430,3 +1430,15 @@ body::before {
 body::after {
   background: radial-gradient(circle, rgba(120, 138, 158, .10), rgba(120, 138, 158, 0) 68%);
 }
+
+/* 页面级返回统一靠右：容器只有返回按钮时，space-between 会把它丢在左边 */
+.guide-header,
+.backup-header {
+  justify-content: flex-end;
+}
+
+/* 侧栏页的返回也收到右上角，和页面级返回同一位置 */
+.manage-nav a.manage-back {
+  align-self: flex-end;
+  margin-left: auto;
+}

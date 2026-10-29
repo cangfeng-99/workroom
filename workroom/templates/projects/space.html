@@ -105,10 +105,10 @@
         <form method="post" action="{% url 'projects:logout' %}">{% csrf_token %}<button class="btn small" type="submit">退出</button></form>
       {% else %}
         <p class="rail-label">外部接入</p>
-        <a class="rail-connect" href="{% url 'projects:connect' %}">Codex / Cursor / WorkBuddy</a>
+        <a class="rail-connect" href="{% url 'projects:connect' %}?from={{ project.pk }}">Codex / Cursor / WorkBuddy</a>
         <p class="rail-label" style="margin-top:10px">记忆</p>
         <a class="rail-connect" href="{% url 'projects:memory' project.pk %}">工作区与长期记忆</a>
-        <a class="rail-connect" href="{% url 'projects:guide' %}">使用指南与练习项目</a>
+        <a class="rail-connect" href="{% url 'projects:guide' %}?from={{ project.pk }}">使用指南与练习项目</a>
       {% endif %}
     </div>
   </aside>

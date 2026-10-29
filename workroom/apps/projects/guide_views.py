@@ -24,6 +24,12 @@ def _local(request):
         raise Http404 from exc
 
 
+def _from_pk(request) -> str:
+    """Only a real project id is a safe return target."""
+    value = str(request.GET.get("from", "")).strip()
+    return value if value.isdigit() else ""
+
+
 def _page(request, error="", status=200):
     return render(
         request,
@@ -34,6 +40,8 @@ def _page(request, error="", status=200):
             "example_phase_count": len(sample_projects.PHASES),
             "example_leaf_count": len(sample_projects.LEAVES),
             "error": error,
+            # 从左栏「使用指南与练习项目」进来时带上项目，返回才回得到工作区
+            "from_pk": _from_pk(request),
         },
         status=status,
     )

@@ -311,7 +311,7 @@ body::before {
   height: 760px;
   left: -200px;
   top: -260px;
-  background: radial-gradient(circle, rgba(72, 205, 156, .55), rgba(72, 205, 156, 0) 66%);
+  background: radial-gradient(circle, rgba(120, 138, 158, .16), rgba(120, 138, 158, 0) 68%);
   animation: drift-a 26s ease-in-out infinite alternate;
 }
 
@@ -320,7 +320,7 @@ body::after {
   height: 880px;
   right: -280px;
   bottom: -340px;
-  background: radial-gradient(circle, rgba(108, 158, 235, .38), rgba(108, 158, 235, 0) 66%);
+  background: radial-gradient(circle, rgba(120, 138, 158, .10), rgba(120, 138, 158, 0) 68%);
   animation: drift-b 32s ease-in-out infinite alternate;
 }
 
@@ -3204,7 +3204,7 @@ body.page-server .workflow-form input:focus-visible, body.page-server .workflow-
 body {
   background:
     radial-gradient(900px 500px at 15% 0%, rgba(255, 255, 255, .9), transparent 65%),
-    linear-gradient(180deg, #f1f4f2 0%, #e4e9e6 100%);
+    linear-gradient(180deg, #f4f5f7 0%, #e6e8ec 100%);
 }
 
 /* 按钮：统一金属胶囊 */
